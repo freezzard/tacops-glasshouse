@@ -44,7 +44,7 @@ export function initCombat(sc) {
   const N = 420;
   pGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3));
   pGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(N * 3), 3));
-  particles = new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 0.085, vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false }));
+  particles = new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 0.085, map: makePuffTexture(), vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false }));
   particles.frustumCulled = false;
   scene.add(particles);
   for (let i = 0; i < N; i++) pData.push({ life: 0, max: 1, vx: 0, vy: 0, vz: 0, grav: 0 });
@@ -65,6 +65,21 @@ export function initCombat(sc) {
     scene.add(mesh);
     projectiles.push({ mesh, active: false, kind: 'frag', x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, fuse: 0, from: null });
   }
+}
+
+function makePuffTexture() {
+  // A soft disc, so impact particles read as puffs of dust and glass
+  // rather than square confetti.
+  const c = document.createElement('canvas');
+  c.width = c.height = 32;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(16, 16, 1, 16, 16, 15);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.55, 'rgba(255,255,255,.55)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 32, 32);
+  return new THREE.CanvasTexture(c);
 }
 
 function makeFlashTexture() {

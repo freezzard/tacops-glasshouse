@@ -85,7 +85,7 @@ export function frameHud() {
   el.hpbar.style.background = hp > 50 ? '#7dd069' : hp > 25 ? '#e8c33d' : '#e85d3d';
   el.apbar.style.width = `${Math.max(0, f.armor)}%`;
   setText(el.money, `$${f.money}`);
-  setText(el.kit, f.hasKit ? 'Defuse kit carried' : S.bomb.carrier === f ? 'You carry the charge' : '');
+  setText(el.kit, f.hasKit ? 'Defuse kit carried' : (S.bomb.carrier === f && S.bomb.state === 'carried') ? 'You carry the charge' : '');
 
   // Arms.
   const def = currentDef(f);

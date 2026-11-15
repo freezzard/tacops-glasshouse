@@ -146,7 +146,13 @@ function setupShot() {
     S.banner = null;
     const atk = S.players.filter((p) => p.team === TEAM.ATK);
     const def = S.players.filter((p) => p.team === TEAM.DEF);
-    for (const f of [...atk, ...def]) { giveWeapon(f, 'rifle'); f.armor = 100; f.weapons.current = 'primary'; }
+    for (const f of [...atk, ...def]) {
+      giveWeapon(f, 'rifle');
+      f.armor = 100;
+      f.weapons.current = 'primary';
+      f.weapons.grenades.frag = 0;
+      f.weapons.grenades.smoke = 0;
+    }
     teleport(S.human, 0.8, 6.8, 0);
     teleport(atk[1], -3.5, 7.5, 0);
     teleport(atk[2], 3.5, 7.5, 0);
@@ -174,7 +180,7 @@ function setupShot() {
     defuser.bot.state = 'defuse';
     // Everyone else stays at their spawns, far away: the tableau is just
     // the defuser at work and the human watching him through the planters.
-    teleport(S.human, -16.2, 3.4, 0);
+    teleport(S.human, -15.2, 4.2, 0);
     S.human.yaw = yawTo(S.human.pos, defuser.pos);
     S.human.pitch = -0.05;
     shotPlan.duration = 1.2;
@@ -205,11 +211,16 @@ function stageShot(dt) {
       input.firing = shotPlan.simT > 0.5;
     }
   }
+  // In the fight tableau the human trades fire but must not fall before
+  // the capture: a deep health buffer during the steps, pinned back to a
+  // clean 100 for the frame that gets photographed.
+  if (S.shot === 'fight') S.human.hp = 250;
   let n = Math.max(1, Math.round(dt / STEP));
   while (n-- > 0 && shotPlan.simT < shotPlan.duration) {
     stepMatch(STEP);
     shotPlan.simT += STEP;
   }
+  if (S.shot === 'fight') S.human.hp = 100;
   if (shotPlan.simT >= shotPlan.duration) {
     shotPlan.hold = true;
     window.__shotReady = true;

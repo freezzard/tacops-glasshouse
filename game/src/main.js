@@ -209,7 +209,7 @@ function setupShot() {
       atk[3].bot.state = 'hold';
       // Closer and lower than the first framing: the dome still owns the
       // shot, but the cast reads at a size a cover needs.
-      S.shotPose = { x: 11, y: 4.6, z: 15.5, yaw: 0.6, pitch: -0.14 };
+      S.shotPose = { x: 11.5, y: 5.4, z: 16.8, yaw: 0.6, pitch: -0.12 };
     }
     shotPlan.hold = true;
     window.__shotReady = true;
@@ -261,9 +261,9 @@ function setupShot() {
     defuser.bot.state = 'defuse';
     // Everyone else stays at their spawns, far away: the tableau is just
     // the defuser at work and the human watching him through the planters.
-    teleport(S.human, -14.6, 1.0, 0);
+    teleport(S.human, -17.0, 2.8, 0);
     S.human.yaw = yawTo(S.human.pos, defuser.pos);
-    S.human.pitch = -0.02;
+    S.human.pitch = -0.03;
     shotPlan.duration = 1.2;
     return;
   }

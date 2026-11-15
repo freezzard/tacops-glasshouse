@@ -261,9 +261,9 @@ function setupShot() {
     defuser.bot.state = 'defuse';
     // Everyone else stays at their spawns, far away: the tableau is just
     // the defuser at work and the human watching him through the planters.
-    teleport(S.human, -17.0, 2.8, 0);
+    teleport(S.human, -14.6, 1.0, 0);
     S.human.yaw = yawTo(S.human.pos, defuser.pos);
-    S.human.pitch = -0.03;
+    S.human.pitch = -0.02;
     shotPlan.duration = 1.2;
     return;
   }

@@ -175,7 +175,8 @@ export function frameHud() {
   if (promptFor(f)) setText(el.prompt, promptFor(f));
   if (S.channel) {
     el.plantwrap.style.display = 'block';
-    setText(el.plantlabel, S.channel.label);
+    const note = S.phase === 'planted' && S.time - S.defuseNote < 1.4 ? ' · +2s INTERFERENCE' : '';
+    setText(el.plantlabel, S.channel.label + note);
     el.plantbar.style.width = `${Math.round(S.channel.frac * 100)}%`;
   } else {
     el.plantwrap.style.display = 'none';

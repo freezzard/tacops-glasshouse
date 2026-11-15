@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { S, TEAM, makeRng } from './state.js';
 import { PAL } from './palette.js';
-import { buildMap, WORLD } from './map.js';
+import { buildMap, WORLD, updateAtmosphere } from './map.js';
 import { buildFigure } from './models.js';
 import { poseFigure } from './anim.js';
 import { initInput, lockPointer, input } from './input.js';
@@ -392,6 +392,7 @@ function frame() {
     if (document.pointerLockElement) document.exitPointerLock();
   }
   if (S.phase !== 'matchover') wasMatchover = false;
+  updateAtmosphere(dt);
   render(now);
 }
 

@@ -109,6 +109,8 @@ export function startRound() {
   plantAnnounced = false;
   defuseProgress = 0;
   defuser = null;
+  S.defuseBonus = 0;
+  S.defusing = null;
   S.feed.length = 0;
   S.channel = null;
 
@@ -332,15 +334,17 @@ function stepPlanted(dt) {
     const holding = f.isHuman ? f.interact : S.botDefusing === f;
     if (holding && dist2d(f.pos, S.bomb.pos) < 1.7) { channeling = f; break; }
   }
+  S.defusing = channeling;
   if (channeling) {
-    if (defuser !== channeling) { defuser = channeling; defuseProgress = 0; AU.defuseSound(); }
+    if (defuser !== channeling) { defuser = channeling; defuseProgress = 0; S.defuseBonus = 0; AU.defuseSound(); }
     defuseProgress += dt;
-    const need = channeling.hasKit ? 5 : 10;
+    const need = (channeling.hasKit ? 5 : 10) + S.defuseBonus;
     S.channel = { label: channeling.hasKit ? 'Purging (purge kit)' : 'Purging — no kit', frac: defuseProgress / need };
     if (defuseProgress >= need) return endRound(TEAM.DEF, 'defuse');
   } else {
     defuser = null;
     defuseProgress = 0;
+    S.defuseBonus = 0;
   }
   if (S.phaseT <= 0) {
     // Detonation: lethal at the heart of the site, and the round is the

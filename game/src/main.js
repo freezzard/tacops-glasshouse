@@ -295,13 +295,13 @@ function stageShot(dt) {
   // In the fight tableau the human trades fire but must not fall before
   // the capture: a deep health buffer during the steps, pinned back to a
   // clean 100 for the frame that gets photographed.
-  if (S.shot === 'fight') S.human.hp = 250;
+  if (S.shot === 'fight' || S.shot === 'defuse') S.human.hp = 250;
   let n = Math.max(1, Math.round(dt / STEP));
   while (n-- > 0 && shotPlan.simT < shotPlan.duration) {
     stepMatch(STEP);
     shotPlan.simT += STEP;
   }
-  if (S.shot === 'fight') S.human.hp = 100;
+  if (S.shot === 'fight' || S.shot === 'defuse') S.human.hp = 100;
   if (shotPlan.simT >= shotPlan.duration) {
     shotPlan.hold = true;
     window.__shotReady = true;

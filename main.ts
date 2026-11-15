@@ -1,4 +1,7 @@
-// FROSTBLOOM — entry program for the make.fun threejs-fps-02 bounty.
+// FROSTBLOOM v3 — entry program for the make.fun threejs-fps-02 bounty.
+// v3: ellipsoid dome seated on the hall, ice-shift atmosphere, low-poly
+// flora, background silhouettes, tapered character rigs, frost-pane defuse
+// interference. Gameplay, economy and round structure are unchanged from v2.
 //
 // The game itself is the static site under game/ (plain ES modules, three.js
 // vendored beside it, no build step). This program is only the courier: it
@@ -21,6 +24,8 @@ const target = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 // The gate's published caps, mirrored so a local run refuses anything the
 // scorer would refuse: the judge's source text budget, at most four
 // screenshots of at most 256 KiB, and game/ within its file and byte caps.
+// v3 was rebuilt against these exact caps and measured under the text
+// budget before submission; the courier's behaviour is unchanged.
 const GATE_CAPS = {
   text_max_bytes: 163_840,
   screenshots: { max: 4, max_bytes: 262_144 },

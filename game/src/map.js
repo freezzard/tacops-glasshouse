@@ -12,6 +12,7 @@
 
 import * as THREE from 'three';
 import { PAL } from './palette.js';
+import { makeRng } from './state.js';
 import * as TEX from './textures.js';
 
 export const WORLD = {
@@ -39,15 +40,18 @@ function buildMats() {
     terra: std({ color: PAL.terracotta, roughness: 0.9 }),
     terraDark: std({ color: PAL.terracottaDark, roughness: 0.9 }),
     crate: std({ map: TEX.crateWood(), roughness: 0.85 }),
+    crateDark: std({ color: PAL.crateDark, roughness: 0.9 }),
     soil: std({ map: TEX.soil(), roughness: 1 }),
     metal: std({ map: TEX.grating(), roughness: 0.6, metalness: 0.55 }),
     metalPlain: std({ color: PAL.metalDark, roughness: 0.5, metalness: 0.6 }),
     bark: std({ map: TEX.bark(), roughness: 1 }),
     leaf: std({ color: PAL.leaf, roughness: 1 }),
     leafLight: std({ color: PAL.leafLight, roughness: 1 }),
-    glass: std({ color: PAL.glass, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.28, side: THREE.DoubleSide }),
-    glassRoof: std({ color: PAL.glass, roughness: 0.12, transparent: true, opacity: 0.16, side: THREE.DoubleSide }),
-    frame: std({ color: PAL.brass, roughness: 0.4, metalness: 0.7 }),
+    leafDark: std({ color: PAL.leafDark, roughness: 1 }),
+    glass: std({ color: PAL.glass, roughness: 0.08, metalness: 0.15, transparent: true, opacity: 0.28, side: THREE.DoubleSide, envMapIntensity: 1.3 }),
+    glassRoof: std({ color: PAL.glass, roughness: 0.12, metalness: 0.15, transparent: true, opacity: 0.16, side: THREE.DoubleSide, envMapIntensity: 1.1 }),
+    frame: std({ color: PAL.brass, roughness: 0.35, metalness: 0.75, envMapIntensity: 1.2 }),
+    water: std({ color: 0x2f5f52, roughness: 0.06, metalness: 0.05, transparent: true, opacity: 0.94, envMapIntensity: 1.6 }),
   };
 }
 
@@ -79,13 +83,30 @@ function glassPane(scene, cx, cz, w, alongX) {
   WORLD.glass.push({ box, mesh, broken: false });
 }
 
+// Planter-top spots where buildFoliage plants its instanced shrubs.
+const shrubSpots = [];
+
 // A planter: soil-topped box for cover, with a burst of foliage planes.
 function planter(scene, cx, cz, w, d, leafTex) {
   solid(scene, cx, cz, w, d, 1.05, mats.terraDark);
+  const rim = new THREE.Mesh(new THREE.BoxGeometry(w + 0.14, 0.1, d + 0.14), mats.terra);
+  rim.position.set(cx, 1.04, cz);
+  rim.castShadow = true;
+  rim.receiveShadow = true;
+  scene.add(rim);
   const top = new THREE.Mesh(new THREE.BoxGeometry(w - 0.15, 0.06, d - 0.15), mats.soil);
   top.position.set(cx, 1.08, cz);
   top.receiveShadow = true;
   scene.add(top);
+  const along = w >= d ? 'x' : 'z';
+  for (const t of [-0.28, 0.05, 0.32]) {
+    shrubSpots.push({
+      x: cx + (along === 'x' ? w * t : (t - 0.05) * 0.8),
+      y: 1.3,
+      z: cz + (along === 'z' ? d * t : (t + 0.02) * 0.8),
+      s: 0.66 + ((shrubSpots.length * 7) % 5) * 0.09,
+    });
+  }
   const leafMat = new THREE.MeshStandardMaterial({ map: leafTex, transparent: true, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 1 });
   for (let i = 0; i < 4; i++) {
     const p = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.1), leafMat);
@@ -99,7 +120,17 @@ function planter(scene, cx, cz, w, d, leafTex) {
 
 function crateStack(scene, cx, cz, high) {
   solid(scene, cx, cz, 1.15, 1.15, 1.05, mats.crate);
-  if (high) solid(scene, cx, cz, 1.15, 1.15, 1.05, mats.crate, 1.05);
+  band(scene, cx, cz, 1.0);
+  if (high) { solid(scene, cx, cz, 1.15, 1.15, 1.05, mats.crate, 1.05); band(scene, cx, cz, 2.05); }
+}
+
+// A dark iron band around a crate's top edge: cheap, and it makes the
+// stack read as freight instead of a plain box.
+function band(scene, cx, cz, y) {
+  const b = new THREE.Mesh(new THREE.BoxGeometry(1.21, 0.08, 1.21), mats.crateDark);
+  b.position.set(cx, y, cz);
+  b.castShadow = true;
+  scene.add(b);
 }
 
 function tree(scene, cx, cz, s) {
@@ -168,23 +199,92 @@ export function buildMap(scene) {
   buildDome(scene, leafTex);
   for (const s of [-1, 1]) buildWing(scene, s, leafTex);
   dressing(scene, leafTex);
+  buildFoliage(scene);
   buildNodes();
   buildSpawns();
 
   // Light: a low warm sun through the glass, and soft green bounce.
-  const hemi = new THREE.HemisphereLight(PAL.hemiSky, PAL.hemiGround, 0.85);
+  const hemi = new THREE.HemisphereLight(PAL.hemiSky, PAL.hemiGround, 1.02);
   scene.add(hemi);
-  const sun = new THREE.DirectionalLight(PAL.sun, 2.0);
+  const sun = new THREE.DirectionalLight(PAL.sun, 2.3);
   sun.position.set(26, 34, 20);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.camera.left = -38; sun.shadow.camera.right = 38;
   sun.shadow.camera.top = 30; sun.shadow.camera.bottom = -30;
   sun.shadow.camera.far = 110;
-  sun.shadow.bias = -0.0006;
+  sun.shadow.bias = -0.0004;
+  sun.shadow.normalBias = 0.03;
   scene.add(sun);
-  scene.fog = new THREE.Fog(PAL.fog, 55, 130);
+  scene.fog = new THREE.Fog(PAL.fog, 46, 120);
   return WORLD;
+}
+
+// The living layer, instanced: leafy shrub blobs and crossed leaf cards on
+// every planter the builders registered, ground shrubs in the quiet
+// corners, and vines hanging from the dome rim. Four draw calls for all of
+// it, matrices written once at build, and nothing where a waypoint walks —
+// the gameplay map underneath is untouched.
+function buildFoliage(scene) {
+  const rng = makeRng(20240);
+  const dummy = new THREE.Object3D();
+  const spots = shrubSpots.slice();
+  for (const [x, z] of [[-11, 7.1], [11, 7.1], [-11, -7.1], [11, -7.1],
+    [-28.5, 19], [28.5, 19], [-28.5, -19], [28.5, -19], [-19, 0.5], [19, -6.8]]) {
+    spots.push({ x, y: 0.42, z, s: 1.25 });
+  }
+  const blobGeo = new THREE.SphereGeometry(0.5, 7, 5);
+  const halves = [[], []];
+  spots.forEach((sp, i) => halves[i % 2].push(sp));
+  [mats.leafDark, mats.leafLight].forEach((mat, h) => {
+    const im = new THREE.InstancedMesh(blobGeo, mat, halves[h].length);
+    halves[h].forEach((sp, i) => {
+      dummy.position.set(sp.x, sp.y + 0.18, sp.z);
+      dummy.scale.set(sp.s * (0.9 + rng() * 0.4), sp.s * 0.72, sp.s * (0.9 + rng() * 0.4));
+      dummy.rotation.set(0, rng() * Math.PI, 0);
+      dummy.updateMatrix();
+      im.setMatrixAt(i, dummy.matrix);
+    });
+    im.castShadow = true;
+    scene.add(im);
+  });
+  // Crossed leaf cards above the planter shrubs, reusing the planter
+  // canopy texture: two instanced planes per spot, crossed at 90 degrees.
+  const cardMat = new THREE.MeshStandardMaterial({
+    map: TEX.leafSprite(), transparent: true, alphaTest: 0.45,
+    side: THREE.DoubleSide, roughness: 1,
+  });
+  const cards = new THREE.InstancedMesh(new THREE.PlaneGeometry(1.35, 0.95), cardMat, spots.length * 2);
+  spots.forEach((sp, i) => {
+    for (let k = 0; k < 2; k++) {
+      dummy.position.set(sp.x, sp.y + 0.42, sp.z);
+      dummy.scale.setScalar(sp.s * 1.5);
+      dummy.rotation.set(0, rng() * Math.PI + (k * Math.PI) / 2, 0);
+      dummy.updateMatrix();
+      cards.setMatrixAt(i * 2 + k, dummy.matrix);
+    }
+  });
+  cards.castShadow = true;
+  scene.add(cards);
+  // Vines down from the dome rim, on an ellipse that hugs the hall.
+  const NV = 26;
+  const vines = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.028, 0.042, 1, 5), mats.leafDark, NV);
+  const tips = new THREE.InstancedMesh(blobGeo, mats.leaf, NV);
+  for (let i = 0; i < NV; i++) {
+    const a = (i / NV) * Math.PI * 2 + rng() * 0.2;
+    const x = Math.cos(a) * 11.6, z = Math.sin(a) * 7.4;
+    const len = 1.1 + rng() * 1.3;
+    dummy.position.set(x, 4.35 - len / 2, z);
+    dummy.scale.set(1, len, 1);
+    dummy.rotation.set(0, 0, 0);
+    dummy.updateMatrix();
+    vines.setMatrixAt(i, dummy.matrix);
+    dummy.position.set(x, 4.35 - len, z);
+    dummy.scale.setScalar(0.34 + rng() * 0.2);
+    dummy.updateMatrix();
+    tips.setMatrixAt(i, dummy.matrix);
+  }
+  scene.add(vines, tips);
 }
 
 function wallShell(scene) {
@@ -227,6 +327,25 @@ function buildDome(scene, leafTex) {
   rim.rotation.x = Math.PI / 2;
   rim.position.y = 4.6;
   scene.add(rim);
+  // The dome's skeleton: four meridian ribs and two latitude rings of
+  // brass, riding just under the glass so the shell reads as engineering,
+  // not a bubble. Visual only — the colliders stay as they were.
+  const ribGeo = new THREE.TorusGeometry(13.42, 0.07, 6, 42, Math.PI * 0.84);
+  for (let k = 0; k < 4; k++) {
+    const rib = new THREE.Mesh(ribGeo, mats.frame);
+    rib.rotation.order = 'YXZ';
+    rib.rotation.y = (k * Math.PI) / 4 + Math.PI / 8;
+    rib.rotation.z = Math.PI / 2 - Math.PI * 0.42;
+    rib.position.y = 1.2;
+    scene.add(rib);
+  }
+  for (const th of [0.2, 0.33]) {
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(13.42 * Math.sin(th * Math.PI), 0.055, 6, 48), mats.frame);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = 1.2 + 13.42 * Math.cos(th * Math.PI);
+    scene.add(ring);
+  }
 
   // Centre planter with the big tree, and four planters around it.
   const bed = new THREE.Mesh(new THREE.CylinderGeometry(1.9, 2.1, 1.05, 18), mats.terraDark);
@@ -237,6 +356,21 @@ function buildDome(scene, leafTex) {
   // walk tests do not wall off the corners that are really open floor.
   WORLD.colliders.push({ x0: -1.55, x1: 1.55, z0: -1.55, z1: 1.55, y0: 0, y1: 1.05, kind: 'wall' });
   tree(scene, 0, 0, 1.5);
+  // A shallow rill pond rings the centre bed: flat enough to wade through
+  // in a fight, glossy enough to throw the dome back at the player.
+  const pond = new THREE.Mesh(new THREE.CircleGeometry(3.35, 36), mats.water);
+  pond.rotation.x = -Math.PI / 2;
+  pond.position.y = 0.025;
+  pond.receiveShadow = true;
+  scene.add(pond);
+  const pondRim = new THREE.Mesh(new THREE.TorusGeometry(3.35, 0.045, 6, 40), mats.frame);
+  pondRim.rotation.x = Math.PI / 2;
+  pondRim.position.y = 0.03;
+  scene.add(pondRim);
+  for (let k = 0; k < 4; k++) {
+    const a = (k / 4) * Math.PI * 2 + 0.4;
+    shrubSpots.push({ x: Math.cos(a) * 1.55, y: 1.28, z: Math.sin(a) * 1.55, s: 0.6 });
+  }
   planter(scene, -6.5, -4.5, 3.4, 1.3, leafTex);
   planter(scene, 6.5, -4.5, 3.4, 1.3, leafTex);
   planter(scene, -6.5, 4.5, 3.4, 1.3, leafTex);
@@ -305,6 +439,11 @@ function buildWing(scene, s, leafTex) {
   roof.rotation.x = -Math.PI / 2;
   roof.position.set(cx, 4.35, 0);
   scene.add(roof);
+  for (const off of [-6, -2, 2, 6]) {
+    const rib = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 16.8), mats.frame);
+    rib.position.set(cx + off, 4.38, 0);
+    scene.add(rib);
+  }
   // Inside: planters along the walls, crates for the site fight, a tree.
   planter(scene, cx - 6.4 * s, -5.6, 1.3, 3.6, leafTex);
   planter(scene, cx - 6.4 * s, 5.6, 1.3, 3.6, leafTex);

@@ -29,12 +29,32 @@ function speckle(ctx, w, h, n, colors, size) {
   }
 }
 
+// Soft worn blotches: foot traffic and weather, at alpha so the base
+// colour still rules.
+function blotches(ctx, w, h, n, color, alpha, rMax) {
+  for (let i = 0; i < n; i++) {
+    ctx.fillStyle = color;
+    ctx.globalAlpha = alpha * (0.4 + rng() * 0.6);
+    ctx.beginPath();
+    ctx.ellipse(rng() * w, rng() * h, 8 + rng() * rMax, 5 + rng() * rMax * 0.6, rng() * 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
 // Large warm tiles with a darker grout cross, for the dome hall floor.
+// Each of the four tiles in the repeat carries its own shade, the way real
+// terracotta fires unevenly.
 export function floorTiles() {
   return canvas(256, 256, (ctx, w, h) => {
-    ctx.fillStyle = '#a5714f';
-    ctx.fillRect(0, 0, w, h);
+    const shades = ['#a5714f', '#9d6a48', '#ab7853', '#a26c46'];
+    for (let ty = 0; ty < 2; ty++) for (let tx = 0; tx < 2; tx++) {
+      ctx.fillStyle = shades[ty * 2 + tx];
+      ctx.fillRect(tx * w / 2, ty * h / 2, w / 2, h / 2);
+    }
     speckle(ctx, w, h, 900, ['#9c6543', '#b07c55', '#a06a48'], 3);
+    blotches(ctx, w, h, 7, '#7c4e30', 0.16, 34);
+    blotches(ctx, w, h, 4, '#c08a5e', 0.12, 26);
     ctx.strokeStyle = '#6e452c';
     ctx.lineWidth = 5;
     ctx.strokeRect(0, 0, w, h);
@@ -46,15 +66,23 @@ export function floorTiles() {
   });
 }
 
-// Paler slab concrete for the service corridor and lanes.
+// Paler slab concrete for the service corridor and lanes, with a panel
+// cross and the stains a working corridor earns.
 export function slabFloor() {
   return canvas(256, 256, (ctx, w, h) => {
     ctx.fillStyle = '#8f8b82';
     ctx.fillRect(0, 0, w, h);
     speckle(ctx, w, h, 1200, ['#85817a', '#9a968e', '#7c786f'], 3);
+    blotches(ctx, w, h, 6, '#6d6a61', 0.18, 36);
+    blotches(ctx, w, h, 3, '#5c6650', 0.13, 24); // moss creeping in
     ctx.strokeStyle = '#5d5a52';
     ctx.lineWidth = 4;
     ctx.strokeRect(0, 0, w, h);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h);
+    ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2);
+    ctx.stroke();
   });
 }
 
@@ -63,6 +91,8 @@ export function soil() {
     ctx.fillStyle = '#4c3a28';
     ctx.fillRect(0, 0, w, h);
     speckle(ctx, w, h, 800, ['#5a4630', '#3e2f1f', '#66513a', '#57432c'], 3);
+    speckle(ctx, w, h, 90, ['#8d8578', '#a39a89'], 2); // grit and small stones
+    blotches(ctx, w, h, 5, '#3f6034', 0.35, 16); // moss between the roots
   });
 }
 
@@ -80,6 +110,12 @@ export function crateWood() {
       const y = rng() * h;
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y + (rng() - 0.5) * 6); ctx.stroke();
     }
+    // A diagonal brace and a stencilled handling mark.
+    ctx.strokeStyle = 'rgba(90,62,30,.5)';
+    ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.moveTo(6, h - 6); ctx.lineTo(w - 6, 6); ctx.stroke();
+    ctx.fillStyle = 'rgba(60,40,18,.4)';
+    ctx.fillRect(w / 2 - 17, h / 2 - 10, 34, 20);
     ctx.strokeStyle = '#6e5227';
     ctx.lineWidth = 8;
     ctx.strokeRect(0, 0, w, h);
@@ -104,6 +140,13 @@ export function bark() {
       ctx.fillStyle = rng() > 0.5 ? 'rgba(40,28,16,.5)' : 'rgba(120,95,60,.35)';
       ctx.fillRect(x, 0, 3, h);
     }
+    for (let i = 0; i < 9; i++) { // knots and short cracks across the grain
+      ctx.strokeStyle = 'rgba(35,24,13,.55)';
+      ctx.lineWidth = 1.5;
+      const x = rng() * w, y = rng() * h;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 6 + rng() * 12, y + (rng() - 0.5) * 4); ctx.stroke();
+    }
+    blotches(ctx, w, h, 4, '#466636', 0.25, 13); // moss on the shaded side
   });
 }
 

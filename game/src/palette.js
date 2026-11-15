@@ -1,7 +1,7 @@
 // palette.js — the glasshouse look in one place.
 //
 // Warm terracotta and brass against living greens, lit like late afternoon
-// through glass. Raiders wear amber, Wardens wear teal, so a silhouette
+// through glass. Graft wear amber, Curators wear teal, so a silhouette
 // reads as friend or foe before its shape does.
 
 export const PAL = {
@@ -29,13 +29,13 @@ export const PAL = {
   crate: 0x9c7a4e,
   crateDark: 0x77582f,
 
-  atk: 0xe8a33d, // Raiders, amber
+  atk: 0xe8a33d, // Graft, amber
   atkDark: 0x9c6a24,
-  def: 0x3fbfae, // Wardens, teal
+  def: 0x3fbfae, // Curators, teal
   defDark: 0x247a6e,
 
-  // The two uniforms (models.js). Wardens: botanical greens under glass-
-  // teal plate, an orange visor. Raiders: charcoal cloth under rust plate,
+  // The two uniforms (models.js). Curators: botanical greens under glass-
+  // teal plate, an orange visor. Graft: charcoal cloth under rust plate,
   // an amber visor. Silhouette first, colour second.
   suitDef: 0x2e5d43,
   armorDef: 0x2f8f83,
@@ -58,5 +58,5 @@ export const PAL = {
   smoke: 0xb9beb9,
 };
 
-export const TEAM_NAME = { atk: 'Raiders', def: 'Wardens' };
-export const SITE_NAME = { A: 'Orchid House', B: 'Fern Vault' };
+export const TEAM_NAME = { atk: 'Graft', def: 'Curators' };
+export const SITE_NAME = { A: 'Orchid Atrium', B: 'Fern Vault' };

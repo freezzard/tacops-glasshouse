@@ -1,8 +1,8 @@
 // map.js — the Glasshouse: a botanical research house, 64 by 44 metres.
 //
-// Layout, south to north: the Raiders' yard, a middle band holding the
-// central dome hall between the Orchid House (site A, west) and the Fern
-// Vault (site B, east), and the Wardens' service corridor. Each site room
+// Layout, south to north: the Graft yard, a middle band holding the
+// central dome hall between the Orchid Atrium (site A, west) and the Fern
+// Vault (site B, east), and the Curators' service corridor. Each site room
 // has three doors — from its gallery beside the dome, from the yard, and
 // from the corridor — and the dome has a catwalk ring with two ramps.
 //
@@ -12,7 +12,7 @@
 
 import * as THREE from 'three';
 import { PAL } from './palette.js';
-import { makeRng } from './state.js';
+import { S, makeRng } from './state.js';
 import * as TEX from './textures.js';
 
 export const WORLD = {
@@ -407,7 +407,7 @@ function buildCatwalk(scene) {
   }
 }
 
-// One site wing. s=-1 builds the Orchid House (west), s=1 the Fern Vault.
+// One site wing. s=-1 builds the Orchid Atrium (west), s=1 the Fern Vault.
 function buildWing(scene, s, leafTex) {
   const cx = 21 * s; // wing centre x
   const inner = 14 * s; // gallery-side wall x
@@ -531,6 +531,10 @@ export function breakGlass(panel) {
   panel.broken = true;
   panel.mesh.visible = false;
   panel.box.y1 = -1; // the collider stops stopping anything
+  // Dome Seal Pressure: every broken pane vents the dome a little further,
+  // but the shell never reads below 60% — the seals hold, barely.
+  S.glassBroken++;
+  S.sealPct = Math.max(60, 100 - 40 * (S.glassBroken / WORLD.glass.length));
 }
 
 export function resetGlass() {
@@ -540,4 +544,6 @@ export function resetGlass() {
     p.mesh.visible = true;
     p.box.y1 = 2.55;
   }
+  S.glassBroken = 0;
+  S.sealPct = 100;
 }

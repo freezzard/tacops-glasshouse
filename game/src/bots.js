@@ -112,7 +112,7 @@ function perceive(f, dt) {
   }
   for (const n of S.noises) {
     if (n.team === f.team) continue;
-    if (Math.hypot(n.x - f.pos.x, n.z - f.pos.z) < n.radius) {
+    if (Math.hypot(n.x - f.pos.x, n.z - f.pos.z) < n.radius * (S.sealPct / 100)) {
       b.heardPos = { x: n.x, z: n.z };
       b.heardAt = S.time;
       if (b.state === 'hold') b.holdYaw = yawTo(f.pos, n);

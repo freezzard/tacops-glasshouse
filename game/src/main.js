@@ -324,7 +324,7 @@ function render(now) {
     poseFigure(f, dt);
     if (f.body) f.body.visible = f.isHuman ? !f.alive : true;
   }
-  // The charge rides on its carrier's back, then sits where it was left.
+  // The Cryo-Core rides on its carrier's back, then sits where it was left.
   if (S.bomb.state === 'carried' && S.bomb.carrier) {
     const c = S.bomb.carrier;
     bombMesh.visible = true;

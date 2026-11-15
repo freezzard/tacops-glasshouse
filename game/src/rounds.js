@@ -118,7 +118,7 @@ export function startRound() {
   for (const f of S.players) {
     freshRoundFighter(f, f.team === TEAM.ATK ? atkSpawns[ai++ % atkSpawns.length] : defSpawns[di++ % defSpawns.length]);
   }
-  // The charge goes to the human when they attack, else to a Raider bot.
+  // The Cryo-Core goes to the human when they attack, else to a Graft bot.
   const attackers = S.players.filter((p) => p.team === TEAM.ATK);
   S.bomb.carrier = S.human.team === TEAM.ATK ? S.human : pick(S.rng, attackers.filter((p) => !p.isHuman));
   S.bomb.state = 'carried';
@@ -133,7 +133,7 @@ export function startRound() {
   S.banner = {
     title: `Round ${S.round}`,
     sub: S.human.team === TEAM.ATK
-      ? (S.bomb.carrier === S.human ? 'You have the charge — plant it at a site. B buys.' : 'Escort the charge to a site. B buys.')
+      ? (S.bomb.carrier === S.human ? 'You have the Cryo-Core — anchor it at a site. B buys.' : 'Escort the Cryo-Core to a site. B buys.')
       : 'Hold the sites. B buys.',
   };
 }
@@ -145,7 +145,7 @@ function planBots() {
   const O_ = WORLD.sites[other];
   let atkBots = S.players.filter((p) => !p.isHuman && p.team === TEAM.ATK);
   let defBots = S.players.filter((p) => !p.isHuman && p.team === TEAM.DEF);
-  // Raiders: the carrier plants, two enter with them, one lurks wide.
+  // Graft: the carrier anchors, two enter with them, one lurks wide.
   atkBots.forEach((f, i) => {
     const b = f.bot;
     b.sitePref = site;
@@ -161,7 +161,7 @@ function planBots() {
       pathTo(f, S_.x + rand(S.rng, -2.5, 2.5), S_.z + rand(S.rng, -2.5, 2.5));
     }
   });
-  // Wardens: two hold each site, the fifth prowls the dome ring.
+  // Curators: two hold each site, the fifth prowls the dome ring.
   defBots.forEach((f, i) => {
     const b = f.bot;
     b.afterAdvance = 'hold';
@@ -273,7 +273,7 @@ function stepLive(dt) {
   if (aliveOf(TEAM.ATK).length === 0) return endRound(TEAM.DEF, 'elimination');
   if (aliveOf(TEAM.DEF).length === 0) return endRound(TEAM.ATK, 'elimination');
 
-  // A dropped charge waits for a Raider to walk over it.
+  // A dropped Cryo-Core waits for a Graft to walk over it.
   if (S.bomb.state === 'dropped') {
     for (const f of S.players) {
       if (f.alive && f.team === TEAM.ATK && dist2d(f.pos, S.bomb.pos) < 1.5) {
@@ -292,7 +292,7 @@ function stepLive(dt) {
     if (at && holding) {
       if (!plantAnnounced) { plantAnnounced = true; AU.plantStartSound(); }
       plantProgress += dt;
-      S.channel = { label: 'Planting the charge', frac: plantProgress / TIME.plant };
+      S.channel = { label: 'Anchoring the Cryo-Core', frac: plantProgress / TIME.plant };
       if (plantProgress >= TIME.plant) return plantBomb(c, at);
     } else {
       plantProgress = Math.max(0, plantProgress - dt * 2);
@@ -312,7 +312,7 @@ function plantBomb(c, at) {
   S.phaseT = TIME.bomb;
   beepAt = S.time + 1;
   S.noises.push({ x: S.bomb.pos.x, z: S.bomb.pos.z, radius: 70, team: TEAM.ATK, kind: 'plant' });
-  S.banner = { title: 'The charge is planted', sub: `${SITE_NAME[at]} — ${TIME.bomb} seconds.` };
+  S.banner = { title: 'Cryo-Core anchored — 40 seconds until total cellular freeze.', sub: SITE_NAME[at] };
   AU.plantBeep(false);
   planRetake();
 }
@@ -325,7 +325,7 @@ function stepPlanted(dt) {
     AU.plantBeep(false);
     beepAt = S.time + (S.phaseT > 20 ? 1 : S.phaseT > 10 ? 0.5 : 0.25);
   }
-  // The defuse channel: a Warden at the charge, holding the action.
+  // The defuse channel: a Curator at the Cryo-Core, holding the action.
   let channeling = null;
   for (const f of S.players) {
     if (!f.alive || f.team !== TEAM.DEF) continue;
@@ -336,7 +336,7 @@ function stepPlanted(dt) {
     if (defuser !== channeling) { defuser = channeling; defuseProgress = 0; AU.defuseSound(); }
     defuseProgress += dt;
     const need = channeling.hasKit ? 5 : 10;
-    S.channel = { label: channeling.hasKit ? 'Defusing (kit)' : 'Defusing — no kit', frac: defuseProgress / need };
+    S.channel = { label: channeling.hasKit ? 'Purging (purge kit)' : 'Purging — no kit', frac: defuseProgress / need };
     if (defuseProgress >= need) return endRound(TEAM.DEF, 'defuse');
   } else {
     defuser = null;
@@ -344,7 +344,7 @@ function stepPlanted(dt) {
   }
   if (S.phaseT <= 0) {
     // Detonation: lethal at the heart of the site, and the round is the
-    // Raiders' however many of them are left standing.
+    // Graft, however many of them are left standing.
     const at = { x: S.bomb.pos.x, y: S.bomb.pos.y + 0.5, z: S.bomb.pos.z };
     AU.explosionSound(6);
     spawnParticles(at.x, at.y, at.z, 0xff9a3c, 42, 7, 0.9, 1);
@@ -373,8 +373,8 @@ function endRound(winner, how) {
   const reasons = {
     elimination: `${TEAM_NAME[loser]} eliminated`,
     time: 'The round clock ran out',
-    defuse: 'The charge was defused',
-    detonation: 'The charge detonated',
+    defuse: 'Cryo-Core purged. The canopy breathes another round.',
+    detonation: 'Total cellular freeze — the specimen is lost',
   };
   S.lastRoundWinner = winner;
   S.banner = { title: `${TEAM_NAME[winner]} win the round`, sub: reasons[how] || '' };

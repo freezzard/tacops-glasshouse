@@ -150,10 +150,10 @@ export function buildFigure(team) {
   part(neck, ball(0.055, 8, 6), skin, 0, 0.01, 0, false);
   const head = joint(neck, 0, 0.04, 0);
   part(head, box(0.24, 0.26, 0.25), skin, 0, 0.12, 0);
-  // The always-worn layer: a Warden's green wrap, a Raider's rust hood.
+  // The always-worn layer: a Curator's green wrap, a Graft rust hood.
   const wrap = part(head, box(0.28, 0.19, 0.28), M.cloth, 0, 0.17, 0.012, false);
   // The bought helmet: a rounded shell, its brim, the glowing visor, and
-  // the team's silhouette mark — a Warden's crest fin, a Raider's horns.
+  // the team's silhouette mark — a Curator's crest fin, a Graft's horns.
   const helmet = new THREE.Group();
   head.add(helmet);
   const shell = part(helmet, ball(0.155, 10, 7), M.armor, 0, 0.19, 0);

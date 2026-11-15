@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
-<title>Glasshouse Breach — a three.js tactical FPS</title>
+<title>FROSTBLOOM — a three.js tactical FPS</title>
 <style>
   html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#0d1512;
     font-family:"Segoe UI", system-ui, sans-serif; color:#e8f0e9; }
@@ -21,6 +21,7 @@
   #clock b { display:block; font-size:22px; line-height:1; font-variant-numeric:tabular-nums; }
   #clock span { font-size:10px; letter-spacing:.14em; text-transform:uppercase; opacity:.85; }
   #clock.hot b { color:#ff7a5c; }
+  #seal { font-size:9.5px; letter-spacing:.12em; opacity:.8; margin-top:2px; font-variant-numeric:tabular-nums; }
   /* bottom corners */
   #vitals { position:absolute; left:18px; bottom:16px; width:230px; }
   .bar { height:12px; border-radius:3px; background:rgba(255,255,255,.14); margin-top:4px; overflow:hidden; }
@@ -97,9 +98,9 @@
 
 <div class="layer" id="hud" hidden>
   <div id="topbar">
-    <div class="side" id="atkbox"><b id="atkScore">0</b><span>Raiders</span></div>
-    <div id="clock"><b id="clockTime">1:40</b><span id="clockLabel">Round</span></div>
-    <div class="side" id="defbox"><b id="defScore">0</b><span>Wardens</span></div>
+    <div class="side" id="atkbox"><b id="atkScore">0</b><span>Graft</span></div>
+    <div id="clock"><b id="clockTime">1:40</b><span id="clockLabel">Round</span><div id="seal">DOME SEAL: 100%</div></div>
+    <div class="side" id="defbox"><b id="defScore">0</b><span>Curators</span></div>
   </div>
   <div id="vitals">
     <div><span id="hpnum">100</span><span id="apnum"></span></div>
@@ -127,15 +128,17 @@
 
 <div id="menu">
   <div class="panel">
-    <h1>GLASSHOUSE <em>BREACH</em></h1>
-    <p>Raiders storm a botanical research glasshouse to plant a charge in the
-       Orchid House or the Fern Vault. Wardens hold the glass. Five against five,
-       sixteen rounds, first to nine — money talks between rounds.</p>
+    <h1>FROST<em>BLOOM</em></h1>
+    <p>The dome holds Earth's last living climate engines. Keep the glass
+       intact, or freeze the future to sell it.</p>
+    <p>The Graft raid the dome to flash-freeze its mother specimens in the
+       Orchid Atrium or the Fern Vault; the Curators hold the glass. Five
+       against five, sixteen rounds, first to nine — Grants talk between rounds.</p>
     <div class="keys">
       <div><b>W A S D</b> move &nbsp; <b>Mouse</b> look &nbsp; <b>Click</b> fire</div>
       <div><b>Shift</b> walk quietly &nbsp; <b>Ctrl / C</b> crouch &nbsp; <b>Space</b> jump</div>
       <div><b>R</b> reload &nbsp; <b>1–4</b> weapons &nbsp; <b>Q</b> last weapon</div>
-      <div><b>B</b> buy menu (freeze time) &nbsp; <b>E</b> plant / defuse &nbsp; <b>Tab</b> scores</div>
+      <div><b>B</b> buy menu (freeze time) &nbsp; <b>E</b> anchor / purge &nbsp; <b>Tab</b> scores</div>
     </div>
     <button id="play">Click to play</button>
     <p style="font-size:12px;opacity:.7">Headphones help: the bots hear gunfire too.</p>

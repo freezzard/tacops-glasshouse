@@ -340,7 +340,8 @@ function explode(p) {
 }
 
 function popSmoke(p) {
-  const cloud = { x: p.x, y: p.y + 0.8, z: p.z, r: 2.7, until: S.time + 9 };
+  // A vented dome (seal at 70% or worse) thins a fresh cloud out 2 s early.
+  const cloud = { x: p.x, y: p.y + 0.8, z: p.z, r: 2.7, until: S.time + (S.sealPct <= 70 ? 7 : 9) };
   smokes.push(cloud);
   const mesh = new THREE.Mesh(
     new THREE.SphereGeometry(2.7, 12, 9),

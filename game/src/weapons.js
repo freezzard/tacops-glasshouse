@@ -50,7 +50,7 @@ export const WEAPONS = {
 export const GEAR = {
   armor: { name: 'Kevlar Vest', price: 650 },
   helmet: { name: 'Vest + Helmet', price: 1000 },
-  kit: { name: 'Defuse Kit', price: 200 },
+  kit: { name: 'Purge Kit', price: 200 },
   frag: { name: 'Frag Grenade', price: 300 },
   smoke: { name: 'Smoke Grenade', price: 300 },
 };

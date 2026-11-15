@@ -100,7 +100,7 @@ export function poseFigure(f, dt) {
 
   // Arms: the solved hold, bent by the two jobs that break it — the reload
   // (support hand leaves the forend for the magazine) and channel work
-  // (both hands down at the charge).
+  // (both hands down at the Cryo-Core).
   let lShX = HOLD.L.shX, lElX = HOLD.L.elX, rShX = HOLD.R.shX, rElX = HOLD.R.elX;
   if (relP >= 0) {
     lShX += (0.52 - HOLD.L.shX) * relBump;

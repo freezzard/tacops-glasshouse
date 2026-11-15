@@ -26,7 +26,7 @@ export const MONEY = {
   cap: 16000,
   kill: 300,
   winElimination: 3250,
-  winObjective: 3500, // detonation, or a defuse for the Wardens
+  winObjective: 3500, // detonation, or a purge for the Curators
   planterBonus: 300,
   lossBase: 1400,
   lossStep: 500,
@@ -51,6 +51,8 @@ export const S = {
     site: null, // 'A' | 'B' once planted
     planter: null,
   },
+  glassBroken: 0, // panes broken this round (map.js breakGlass counts)
+  sealPct: 100, // Dome Seal Pressure: max(60, 100 - 40 * broken/total)
   noises: [], // {x, z, radius, team, kind} heard this step, drained by bots
   feed: [], // kill-feed lines waiting for the HUD
   banner: null, // {title, sub} the HUD shows until replaced

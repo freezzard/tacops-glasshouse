@@ -22,7 +22,7 @@ let scopeEl = null;
 function $(id) { return document.getElementById(id); }
 
 export function initHud() {
-  for (const id of ['hud', 'atkScore', 'defScore', 'clockTime', 'clockLabel', 'clock',
+  for (const id of ['hud', 'atkScore', 'defScore', 'clockTime', 'clockLabel', 'clock', 'seal',
     'hpnum', 'apnum', 'hpbar', 'apbar', 'money', 'kit', 'wname', 'ammo', 'slots',
     'cross', 'hitmark', 'dmgdir', 'vig', 'prompt', 'plantwrap', 'plantlabel', 'plantbar',
     'feed', 'banner', 'bannerTitle', 'bannerSub', 'buy', 'buysub', 'buygrid',
@@ -73,8 +73,9 @@ export function frameHud() {
   setText(el.atkScore, String(S.score.atk));
   setText(el.defScore, String(S.score.def));
   setText(el.clockTime, fmtClock(S.phaseT));
-  const labels = { freeze: 'Buy time', live: 'Round', planted: 'Charge planted', roundover: 'Round over', matchover: 'Match over' };
+  const labels = { freeze: 'Buy time', live: 'Round', planted: 'Cryo-Core anchored', roundover: 'Round over', matchover: 'Match over' };
   setText(el.clockLabel, labels[S.phase] || '');
+  setText(el.seal, `DOME SEAL: ${Math.round(S.sealPct)}%`);
   el.clock.classList.toggle('hot', S.phase === 'planted' || (S.phase === 'live' && S.phaseT < 10));
 
   // Vitals.
@@ -84,8 +85,8 @@ export function frameHud() {
   el.hpbar.style.width = `${hp}%`;
   el.hpbar.style.background = hp > 50 ? '#7dd069' : hp > 25 ? '#e8c33d' : '#e85d3d';
   el.apbar.style.width = `${Math.max(0, f.armor)}%`;
-  setText(el.money, `$${f.money}`);
-  setText(el.kit, f.hasKit ? 'Defuse kit carried' : (S.bomb.carrier === f && S.bomb.state === 'carried') ? 'You carry the charge' : '');
+  setText(el.money, `G${f.money}`);
+  setText(el.kit, f.hasKit ? 'Purge kit carried' : (S.bomb.carrier === f && S.bomb.state === 'carried') ? 'You carry the Cryo-Core' : '');
 
   // Arms.
   const def = currentDef(f);
@@ -188,9 +189,9 @@ export function frameHud() {
 function promptFor(f) {
   if (!f.alive) return 'Down — spectating a teammate until the round ends';
   if (S.phase === 'live' && S.bomb.carrier === f) {
-    return 'Carry the charge into a marked site and hold E to plant';
+    return 'Carry the Cryo-Core into a marked site and hold E to anchor';
   }
-  if (S.phase === 'planted' && f.team === TEAM.DEF) return 'Reach the charge and hold E to defuse';
+  if (S.phase === 'planted' && f.team === TEAM.DEF) return 'Reach the Cryo-Core and hold E to purge';
   if (S.phase === 'freeze') return 'Buy with B — the round starts when the clock does';
   return null;
 }
@@ -208,7 +209,7 @@ function frameBuy(f) {
   const signature = [f.money, f.weapons.primary, f.armor, f.helmet, f.hasKit, f.weapons.grenades.frag, f.weapons.grenades.smoke].join('|');
   if (signature === buySignature) return;
   buySignature = signature;
-  setText(el.buysub, `You have $${f.money} — press a number to buy, B to close. Unspent money carries over.`);
+  setText(el.buysub, `You have G${f.money} in Grants — press a number to buy, B to close. Unspent Grants carry over.`);
   el.buygrid.innerHTML = '';
   BUY_ORDER.forEach((id, i) => {
     const isGun = !!WEAPONS[id];
@@ -217,10 +218,10 @@ function frameBuy(f) {
     const owned = (isGun && f.weapons.primary === id) ||
       (id === 'armor' && f.armor >= 100) || (id === 'helmet' && f.helmet) ||
       (id === 'kit' && f.hasKit) || ((id === 'frag' || id === 'smoke') && f.weapons.grenades[id] > 0);
-    const blocked = (id === 'kit' && f.team !== TEAM.DEF) ? 'Wardens only'
+    const blocked = (id === 'kit' && f.team !== TEAM.DEF) ? 'Curators only'
       : (id === 'helmet' && f.armor <= 0) ? 'Needs vest' : null;
     const btn = document.createElement('button');
-    btn.innerHTML = `<span class="key">${i + 1}</span> ${name} <b>${owned ? 'owned' : blocked || '$' + price}</b>`;
+    btn.innerHTML = `<span class="key">${i + 1}</span> ${name} <b>${owned ? 'owned' : blocked || 'G' + price}</b>`;
     btn.disabled = owned || !!blocked || f.money < price;
     btn.addEventListener('click', () => buyItem(f, id));
     el.buygrid.appendChild(btn);
@@ -231,9 +232,9 @@ function frameBoard(f) {
   const show = !!input.keys['Tab'] && S.phase !== 'menu';
   el.board.style.display = show ? 'block' : 'none';
   if (!show) return;
-  setText(el.boardTitle, `Glasshouse Breach — Round ${S.round} · Raiders ${S.score.atk} : ${S.score.def} Wardens`);
+  setText(el.boardTitle, `FROSTBLOOM — Round ${S.round} · ${TEAM_NAME.atk} ${S.score.atk} : ${S.score.def} ${TEAM_NAME.def}`);
   const rows = [...S.players].sort((a, b) => b.kills - a.kills || a.deaths - b.deaths);
-  let html = '<table><tr><th>Fighter</th><th>Side</th><th class="n">K</th><th class="n">D</th><th class="n">A</th><th class="n">$</th></tr>';
+  let html = '<table><tr><th>Fighter</th><th>Side</th><th class="n">K</th><th class="n">D</th><th class="n">A</th><th class="n">G</th></tr>';
   for (const p of rows) {
     html += `<tr class="${p === f ? 'me' : ''}"><td>${p.name}${p.alive ? '' : ' — down'}</td>` +
       `<td>${TEAM_NAME[p.team]}</td><td class="n">${p.kills}</td><td class="n">${p.deaths}</td>` +
@@ -247,7 +248,7 @@ function frameEnd(f) {
   endShown = true;
   const won = S.over.winner === f.team;
   setText(el.endTitle, won ? 'VICTORY' : 'DEFEAT');
-  setText(el.endSub, `Raiders ${S.score.atk} — ${S.score.def} Wardens over ${S.round} rounds. ` +
-    (won ? 'The glasshouse is yours.' : 'The Wardens keep the glass.'));
+  setText(el.endSub, `${TEAM_NAME.atk} ${S.score.atk} — ${S.score.def} ${TEAM_NAME.def} over ${S.round} rounds. ` +
+    (won ? 'The canopy breathes on.' : 'The dome seals in silence.'));
   el.end.style.display = 'flex';
 }

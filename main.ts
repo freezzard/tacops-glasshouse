@@ -1,4 +1,4 @@
-// Glasshouse Breach — entry program for the make.fun threejs-fps-02 bounty.
+// FROSTBLOOM — entry program for the make.fun threejs-fps-02 bounty.
 //
 // The game itself is the static site under game/ (plain ES modules, three.js
 // vendored beside it, no build step). This program is only the courier: it
@@ -40,4 +40,4 @@ if (existsSync(shotsFrom)) {
 
 const dossier = buildDossier(target, GATE_CAPS);
 writeFileSync(join(target, 'dossier.json'), dossier);
-console.log(`glasshouse-breach: game + screenshots copied, dossier written (${dossier.length} bytes) to ${target}`);
+console.log(`frostbloom: game + screenshots copied, dossier written (${dossier.length} bytes) to ${target}`);

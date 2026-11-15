@@ -53,6 +53,9 @@ export const S = {
   },
   glassBroken: 0, // panes broken this round (map.js breakGlass counts)
   sealPct: 100, // Dome Seal Pressure: max(60, 100 - 40 * broken/total)
+  defuseBonus: 0, // frost-interference seconds added to the running purge
+  defuseNote: -9, // S.time of the last interference (the HUD flashes it)
+  defusing: null, // the fighter purging right now, kept by rounds.js
   noises: [], // {x, z, radius, team, kind} heard this step, drained by bots
   feed: [], // kill-feed lines waiting for the HUD
   banner: null, // {title, sub} the HUD shows until replaced

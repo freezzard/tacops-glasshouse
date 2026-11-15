@@ -250,6 +250,13 @@ function firePellet(f, def, yaw, pitch) {
       const panel = WORLD.glass.find((g) => g.box === wall.box);
       if (panel && !panel.broken) {
         breakGlass(panel);
+        // Frost interference: a pane venting mid-purge floods the purge
+        // kit with cold — Dome Seal Pressure turned against the purge.
+        // Any shooter's broken pane adds 2 s to it, 4 s at most.
+        if (S.phase === 'planted' && S.defusing && S.defuseBonus < 4) {
+          S.defuseBonus = Math.min(4, S.defuseBonus + 2);
+          S.defuseNote = S.time;
+        }
         AU.glassSound(dist2d({ x: hx, z: hz }, S.human.pos));
         spawnParticles(hx, hy, hz, PAL.glass, 14, 2.4, 0.6, 4);
         S.noises.push({ x: hx, z: hz, radius: 14, team: f.team, kind: 'glass' });

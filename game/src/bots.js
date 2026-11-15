@@ -312,7 +312,7 @@ export function stepBot(f, dt) {
       } else {
         f.vel.x = 0; f.vel.z = 0;
         f.crouch = true;
-        faceToward(f, S.bomb.pos.x + 4, S.bomb.pos.z, dt, 2);
+        faceToward(f, S.bomb.pos.x, S.bomb.pos.z, dt, 2);
         S.botDefusing = f;
       }
       break;

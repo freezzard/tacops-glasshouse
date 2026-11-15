@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { S, TEAM, makeRng } from './state.js';
 import { PAL } from './palette.js';
-import { buildMap, WORLD, updateAtmosphere } from './map.js';
+import { buildMap, WORLD, breakGlass, updateAtmosphere } from './map.js';
 import { buildFigure } from './models.js';
 import { poseFigure } from './anim.js';
 import { initInput, lockPointer, input } from './input.js';
@@ -264,6 +264,21 @@ function setupShot() {
     teleport(S.human, -14.6, 1.0, 0);
     S.human.yaw = yawTo(S.human.pos, defuser.pos);
     S.human.pitch = -0.02;
+    // Frost-pane garnish: break the site-A pane inside this camera's
+    // field of view via breakGlass(); the purge takes combat.js's +2 s.
+    const hp = S.human.pos, dp = defuser.pos;
+    const vx = dp.x - hp.x, vz = dp.z - hp.z, vl = Math.hypot(vx, vz);
+    const hf = Math.atan(Math.tan(camera.fov * Math.PI / 360) * camera.aspect);
+    let pane = null, pd = Infinity;
+    for (const g of WORLD.glass) {
+      if (g.broken) continue;
+      const cx = (g.box.x0 + g.box.x1) / 2, cz = (g.box.z0 + g.box.z1) / 2;
+      const rx = cx - hp.x, rz = cz - hp.z;
+      if (Math.acos((rx * vx + rz * vz) / (Math.hypot(rx, rz) * vl)) > hf) continue;
+      const d = Math.hypot(cx - dp.x, cz - dp.z);
+      if (d < pd) { pd = d; pane = g; }
+    }
+    if (pane) { breakGlass(pane); S.defuseBonus = 2; S.defuseNote = S.time; }
     shotPlan.duration = 1.2;
     return;
   }
@@ -296,6 +311,7 @@ function stageShot(dt) {
   // the capture: a deep health buffer during the steps, pinned back to a
   // clean 100 for the frame that gets photographed.
   if (S.shot === 'fight' || S.shot === 'defuse') S.human.hp = 250;
+  if (S.shot === 'defuse') S.defuseNote = S.time; // interference flash stays up for the capture
   let n = Math.max(1, Math.round(dt / STEP));
   while (n-- > 0 && shotPlan.simT < shotPlan.duration) {
     stepMatch(STEP);

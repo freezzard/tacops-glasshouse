@@ -175,13 +175,26 @@ function setupShot() {
       f.weapons.current = 'primary';
     }
     if (mode === 'pose') {
-      teleport(def[0], -0.75, -0.2, 0);
-      def[0].yaw = yawTo(def[0].pos, { x: 2.6, z: 3.6 });
-      def[0].bot.state = 'hold';
-      def[0].pitch = 0.08;
-      teleport(atk[0], 0.85, 0.35, 0);
-      atk[0].yaw = yawTo(atk[0].pos, { x: 2.6, z: 3.6 });
-      S.shotPose = { x: 2.6, y: 1.55, z: 3.6, yaw: 0.63, pitch: -0.04 };
+      // The pair stands on open floor south of the tree bed, lit by the
+      // dome, facing the lens; the rest of the cast waits behind the
+      // camera (the frame loop force-shows bot bodies, so distance, not
+      // visibility, keeps them out of the portrait).
+      const pair = [def.find((p) => !p.isHuman), atk.find((p) => !p.isHuman)];
+      teleport(pair[0], -0.85, 5.2, 0);
+      pair[0].yaw = yawTo(pair[0].pos, { x: 0.4, z: 8.8 });
+      pair[0].bot.state = 'hold';
+      pair[0].pitch = 0.08;
+      teleport(pair[1], 0.85, 5.2, 0);
+      pair[1].yaw = yawTo(pair[1].pos, { x: 0.4, z: 8.8 });
+      pair[1].bot.state = 'hold';
+      pair[1].pitch = 0.08;
+      let park = -6;
+      for (const p of S.players) {
+        if (p === pair[0] || p === pair[1]) continue;
+        teleport(p, park, 19, Math.PI);
+        park += 1.7;
+      }
+      S.shotPose = { x: 0.4, y: 1.5, z: 8.8, yaw: 0.11, pitch: -0.1 };
     } else {
       teleport(def[0], -3, -6.9, Math.PI);
       def[0].pos.y = 3.0; // on the north catwalk
@@ -261,7 +274,7 @@ function stageShot(dt) {
   }
   if (shotPlan.hold) return;
   if (S.shot === 'fight' && S.human.alive) {
-    // The human trades fire with the nearest Warden for the camera.
+    // The human trades fire with the nearest Curator for the camera.
     let best = null, bd = Infinity;
     for (const p of S.players) {
       if (p.team !== TEAM.DEF || !p.alive) continue;

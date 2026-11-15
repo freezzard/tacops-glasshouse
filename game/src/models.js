@@ -29,6 +29,12 @@ function ball(r, w, h) {
   if (!g) { g = new THREE.SphereGeometry(r, w, h); geoCache.set(key, g); }
   return g;
 }
+function cyl(rt, rb, h) {
+  const key = 'c' + rt + ',' + rb + ',' + h;
+  let g = geoCache.get(key);
+  if (!g) { g = new THREE.CylinderGeometry(rt, rb, h, 7); geoCache.set(key, g); }
+  return g;
+}
 
 const std = (color, roughness, metalness = 0, extra = {}) =>
   new THREE.MeshStandardMaterial({ color, roughness, metalness, flatShading: true, ...extra });
@@ -129,14 +135,15 @@ export function buildFigure(team) {
     const thigh = joint(hips, 0.105 * s, -0.03, 0);
     part(thigh, box(0.155, 0.43, 0.18), M.suit, 0, -0.215, 0);
     const shin = joint(thigh, 0, -0.43, 0);
-    part(shin, box(0.13, 0.42, 0.15), M.suit, 0, -0.21, 0);
+    part(shin, cyl(0.06, 0.046, 0.42), M.suit, 0, -0.21, 0);
     part(shin, box(0.145, 0.15, 0.05), M.armorDark, 0, -0.1, -0.095, false); // knee pad
     part(shin, box(0.125, 0.09, 0.29), MAT.boot, 0, -0.415, -0.05); // boot
     legs[key] = { thigh, shin };
   }
 
   const spine = joint(hips, 0, 0.09, 0);
-  part(spine, box(0.4, 0.49, 0.22), M.suit, 0, 0.245, 0); // torso
+  const torso = part(spine, cyl(0.2, 0.16, 0.49), M.suit, 0, 0.245, 0); // torso
+  torso.scale.z = 0.58; // a rounded column at the box's slim depth
   part(spine, box(0.43, 0.4, 0.26), M.armor, 0, 0.26, 0); // vest shell
   part(spine, box(0.1, 0.12, 0.05), M.armorDark, -0.09, 0.13, -0.155, false); // pouches
   part(spine, box(0.1, 0.12, 0.05), M.armorDark, 0.09, 0.13, -0.155, false);
@@ -145,6 +152,17 @@ export function buildFigure(team) {
   // A bright team stripe across the back, so friend and foe read from
   // behind as surely as from the front.
   part(spine, box(0.34, 0.07, 0.02), M.armor, 0, 0.42, 0.27, false);
+  // Silhouette marks at the shoulder line: a Curator carries a slim
+  // bio-filter tank upright beside the pack; a Graft wears one pauldron
+  // canted hard, with a cryo tube slung across the pack's back.
+  if (team === TEAM.DEF) {
+    part(spine, cyl(0.05, 0.058, 0.44), M.armor, 0.22, 0.28, 0.16, false); // bio-filter tank
+  } else {
+    const pauldron = part(spine, box(0.21, 0.07, 0.27), M.armor, -0.27, 0.5, 0, false);
+    pauldron.rotation.z = 0.4;
+    const tube = part(spine, cyl(0.05, 0.05, 0.36), M.armor, 0, 0.3, 0.29, false); // cryo tube
+    tube.rotation.z = Math.PI / 2;
+  }
 
   const neck = joint(spine, 0, 0.5, 0);
   part(neck, ball(0.055, 8, 6), skin, 0, 0.01, 0, false);
@@ -159,7 +177,15 @@ export function buildFigure(team) {
   const shell = part(helmet, ball(0.155, 10, 7), M.armor, 0, 0.19, 0);
   shell.scale.set(1, 0.78, 1.06);
   part(helmet, box(0.3, 0.035, 0.32), M.armorDark, 0, 0.145, 0, false);
-  part(helmet, box(0.2, 0.06, 0.02), M.visor, 0, 0.115, -0.128, false);
+  if (team === TEAM.DEF) {
+    // The Curator visor wraps: two angled plates meeting at the brow.
+    for (const s of [-1, 1]) {
+      const v = part(helmet, box(0.115, 0.06, 0.02), M.visor, 0.055 * s, 0.115, -0.13, false);
+      v.rotation.y = -0.38 * s;
+    }
+  } else {
+    part(helmet, box(0.2, 0.06, 0.02), M.visor, 0, 0.115, -0.128, false);
+  }
   if (team === TEAM.DEF) {
     part(helmet, box(0.045, 0.11, 0.24), M.armor, 0, 0.325, 0.01, false); // crest
   } else {
@@ -180,9 +206,9 @@ export function buildFigure(team) {
     const key = s < 0 ? 'L' : 'R';
     const sh = joint(aim, 0.245 * s, 0.02, 0);
     part(sh, box(0.13, 0.13, 0.14), M.armor, 0, 0.01, 0, false); // shoulder pad
-    part(sh, box(0.115, 0.3, 0.125), M.suit, 0, -0.15, 0); // upper arm
+    part(sh, cyl(0.056, 0.047, 0.3), M.suit, 0, -0.15, 0); // upper arm
     const el = joint(sh, 0, -0.3, 0);
-    part(el, box(0.1, 0.28, 0.11), M.armorDark, 0, -0.14, 0); // forearm guard
+    part(el, cyl(0.05, 0.043, 0.28), M.armorDark, 0, -0.14, 0); // forearm guard
     part(el, box(0.095, 0.09, 0.12), MAT.glove, 0, -0.31, 0, false); // hand
     arms[key] = { sh, el };
   }

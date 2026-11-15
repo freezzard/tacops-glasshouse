@@ -29,7 +29,9 @@ S.shot = params.get('shot');
 
 const canvas = document.getElementById('view');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+// Screenshot captures render at pixel ratio 2 so the stills can be
+// supersampled down; live play keeps the 1.5 cap for frame rate.
+renderer.setPixelRatio(S.shot ? 2 : Math.min(window.devicePixelRatio, 1.5));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;

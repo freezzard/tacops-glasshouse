@@ -31,7 +31,7 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 
@@ -129,7 +129,7 @@ function teleport(f, x, z, yaw) {
 function setupShot() {
   const mode = S.shot;
   if (mode === 'vista') {
-    S.shotPose = { x: -10.4, y: 4.7, z: -6.4, yaw: -2.24, pitch: -0.16 };
+    S.shotPose = { x: 10.5, y: 5.4, z: 16.5, yaw: 0.57, pitch: -0.13 };
     shotPlan.hold = true;
     window.__shotReady = true;
     return;

@@ -5,12 +5,12 @@
 // air one, so counter-strafing works: let go of the key and you stop dead
 // inside a step or two, which is exactly when your spread collapses.
 
-import * as THREE from 'three';
 import { S } from './state.js';
 import { input, takeMouse, takePress, held } from './input.js';
 import { JUMP_VEL, eyeHeight } from './physics.js';
 import { currentDef, currentWeaponId, switchTo } from './weapons.js';
 import { tryFire, startReload } from './combat.js';
+import { buildViewmodel, setWeaponLook } from './models.js';
 import * as AU from './audio.js';
 
 let prevFiring = false;
@@ -19,6 +19,7 @@ let stepAcc = 0;
 let vm = null; // viewmodel group
 let vmParts = {};
 let bobPhase = 0;
+let swayDX = 0, swayDY = 0; // raw mouse travel since the last rendered frame
 
 export function stepPlayer(dt) {
   const f = S.human;
@@ -28,6 +29,7 @@ export function stepPlayer(dt) {
 
   // Look.
   const m = takeMouse();
+  swayDX += m.dx; swayDY += m.dy; // the viewmodel trails this in syncViewmodel
   const sens = f.scoped ? 0.0009 : 0.0021;
   f.yaw -= m.dx * sens;
   f.pitch -= m.dy * sens;
@@ -102,54 +104,91 @@ export function stepPlayer(dt) {
 
 // ---------- viewmodel ----------
 
-function buildViewmodel() {
-  vm = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({ color: 0x2e3236, roughness: 0.4, metalness: 0.55 });
-  const matAccent = new THREE.MeshStandardMaterial({ color: 0x8a6d2f, roughness: 0.5, metalness: 0.4 });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.15, 0.52), mat);
-  const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.34), mat);
-  barrel.position.set(0, 0.035, -0.4);
-  const mag = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.09), matAccent);
-  mag.position.set(0, -0.13, -0.05);
-  const sight = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.06, 0.03), mat);
-  sight.position.set(0, 0.1, -0.12);
-  const pump = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.2), matAccent);
-  pump.position.set(0, -0.04, -0.3);
-  vm.add(body, barrel, mag, sight, pump);
-  vmParts = { body, barrel, mag, sight, pump };
-  vm.position.set(0.24, -0.22, -0.45);
-  return vm;
-}
+// The viewmodel is models.js work — the fighter's own arms and gun, in his
+// team's sleeves. This file only poses it: a distance-driven bob, mouse
+// sway on a spring, a recoil spring the shots kick, a sprint carry, an
+// aim-down-sights glide, and a reload in which the support hand takes the
+// magazine out and seats it again on weapons.js's own timings.
+let vmTeam = null;
+let swayYaw = 0, swayPitch = 0; // mouse delta captured by stepPlayer
+let adsT = 0, sprintT = 0;
+let kickX = 0, kickV = 0, prevRecoil = 0;
 
 export function initViewmodel(camera) {
-  camera.add(buildViewmodel());
+  const built = buildViewmodel(S.human.team);
+  vm = built.group;
+  vmParts = built.parts;
+  vmTeam = S.human.team;
+  vm.position.set(0.24, -0.22, -0.45);
+  camera.add(vm);
 }
 
-// Places the gun each rendered frame: bob from strides, sway from the last
-// mouse move, a dip while reloading or drawing, and a kick when a shot's
-// recoil is still unwinding.
+const clampN = (v, n) => Math.max(-n, Math.min(n, v));
+
 export function syncViewmodel(f, dt) {
   if (!vm) return;
   const w = f.weapons;
   const id = currentWeaponId(f);
   if (!f.alive || !id || S.phase === 'menu' || S.phase === 'matchover') { vm.visible = false; return; }
   vm.visible = true;
-  const isGun = id !== 'knife' && id !== 'frag' && id !== 'smoke';
-  vmParts.barrel.visible = isGun;
-  vmParts.mag.visible = isGun && id !== 'shotgun';
-  vmParts.pump.visible = id === 'shotgun';
-  vmParts.sight.visible = isGun;
-  vmParts.body.scale.z = id === 'sniper' ? 1.35 : id === 'smg' ? 0.8 : id === 'pistol' ? 0.55 : 1;
-  vmParts.body.visible = id !== 'frag' && id !== 'smoke';
-  bobPhase += f.speedNow * dt * 1.9;
-  const bob = Math.min(1, f.speedNow / 4) * 0.016;
-  const dip = w.reloadT > 0 ? 0.09 : w.drawT > 0 ? w.drawT * 0.3 : 0;
-  vm.position.x = 0.24 + Math.sin(bobPhase * 0.5) * bob * 0.5;
-  vm.position.y = -0.22 + Math.abs(Math.cos(bobPhase * 0.5)) * bob - dip;
-  vm.position.z = -0.45 + (f.recoil || 0) * 1.4;
-  vm.rotation.x = (w.reloadT > 0 ? 0.5 : 0) + (f.recoil || 0) * 1.1;
-  vm.rotation.z = f.scoped ? 0 : Math.sin(bobPhase * 0.5) * bob * 0.4;
-  if (f.scoped) { vm.position.x = 0; vm.position.y = -0.148; vm.position.z = -0.3; }
+  if (f.team !== vmTeam) { // halftime swap: the sleeves change sides too
+    vmTeam = f.team;
+    const suit = vmParts.teamMats[f.team].suit;
+    for (const s of vmParts.sleeves) s.material = suit;
+  }
+  if (id !== syncViewmodel._id) { syncViewmodel._id = id; setWeaponLook(vmParts.gunParts, id); }
+
+  // Distance-driven bob, dying away as the sights come up.
+  bobPhase += f.speedNow * dt * 3.4;
+  const adsGoal = f.scoped ? 1 : input.aiming ? 0.55 : 0;
+  adsT += (adsGoal - adsT) * (1 - Math.exp(-16 * dt));
+  const bobAmp = Math.min(1, f.speedNow / 4.5) * (1 - 0.9 * adsT);
+  const bobX = 0.009 * Math.sin(bobPhase) * bobAmp;
+  const bobY = 0.01 * Math.abs(Math.sin(bobPhase)) * bobAmp;
+
+  // Mouse sway: the gun trails the look by a few hundredths of a radian.
+  swayYaw = clampN(swayYaw * Math.exp(-11 * dt) + clampN(swayDX, 60) * 0.00045, 0.035);
+  swayPitch = clampN(swayPitch * Math.exp(-11 * dt) + clampN(swayDY, 60) * 0.00045, 0.03);
+  swayDX = 0; swayDY = 0;
+
+  // Recoil spring: combat only reports f.recoil; a fresh rise means a shot
+  // was fired, and the spring turns it into a kick that settles.
+  const rec = f.recoil || 0;
+  if (rec > prevRecoil + 0.002) kickV += 2.1;
+  prevRecoil = rec;
+  kickV += (-130 * kickX - 20 * kickV) * dt;
+  kickX += kickV * dt;
+
+  // Sprint carry: gun canted and low while running with no shot in flight.
+  const sprintGoal = f.speedNow > 4.4 && !input.firing && !input.aiming &&
+    w.reloadT <= 0 && rec < 0.01 && f.onGround ? 1 : 0;
+  sprintT += (sprintGoal - sprintT) * (1 - Math.exp(-9 * dt));
+
+  // Reload, on the weapon's own clock: tilt, support hand down with the
+  // magazine, both back by the end.
+  let relBump = 0, magBump = 0;
+  if (w.reloadT > 0) {
+    const def = currentDef(f);
+    if (def && def.reload > 0) {
+      const p = 1 - w.reloadT / def.reload;
+      relBump = Math.sin(Math.PI * Math.max(0, Math.min(1, p)));
+      magBump = Math.sin(Math.PI * Math.max(0, Math.min(1, (p - 0.25) / 0.6)));
+    }
+  }
+  const dip = w.drawT > 0 ? w.drawT * 0.3 : 0;
+  vmParts.gunParts.mag.position.y = -0.125 - 0.13 * Math.max(0, magBump);
+  vmParts.armL.position.y = -0.14 - 0.11 * relBump;
+  vmParts.armL.position.z = -0.34 + 0.05 * relBump;
+  vmParts.armL.rotation.x = -0.3 * relBump;
+
+  const hipX = 0.24, hipY = -0.22, hipZ = -0.45;
+  const adsX = 0, adsY = -0.148, adsZ = -0.3;
+  vm.position.x = hipX + (adsX - hipX) * adsT + bobX - swayYaw * 1.4 - sprintT * 0.07;
+  vm.position.y = hipY + (adsY - hipY) * adsT + bobY - dip - relBump * 0.05 - sprintT * 0.02;
+  vm.position.z = hipZ + (adsZ - hipZ) * adsT + kickX * 0.05 + rec * 0.9;
+  vm.rotation.x = kickX * 0.55 + rec * 0.8 + relBump * 0.38 - sprintT * 0.22 - swayPitch * 1.2;
+  vm.rotation.y = -swayYaw * 1.6 - sprintT * 0.55;
+  vm.rotation.z = Math.sin(bobPhase) * 0.012 * bobAmp + sprintT * 0.3;
 }
 
 // Where the camera sits this frame, including recoil and shake. Spectating

@@ -129,7 +129,7 @@ function teleport(f, x, z, yaw) {
 function setupShot() {
   const mode = S.shot;
   if (mode === 'vista') {
-    S.shotPose = { x: 10.5, y: 5.4, z: 16.5, yaw: 0.57, pitch: -0.13 };
+    S.shotPose = { x: 12.5, y: 6.4, z: 18.5, yaw: 0.57, pitch: -0.17 };
     shotPlan.hold = true;
     window.__shotReady = true;
     return;
@@ -147,13 +147,12 @@ function setupShot() {
     const atk = S.players.filter((p) => p.team === TEAM.ATK);
     const def = S.players.filter((p) => p.team === TEAM.DEF);
     for (const f of [...atk, ...def]) { giveWeapon(f, 'rifle'); f.armor = 100; f.weapons.current = 'primary'; }
-    teleport(S.human, 0, 6.5, 0);
+    teleport(S.human, 0.8, 6.8, 0);
     teleport(atk[1], -3.5, 7.5, 0);
     teleport(atk[2], 3.5, 7.5, 0);
     teleport(def[0], 0, -5.5, Math.PI);
-    teleport(def[1], -4, -4.5, Math.PI);
-    teleport(def[2], 4.5, -3.5, Math.PI);
-    shotPlan.duration = 1.7;
+    teleport(def[1], -5.5, -6.5, Math.PI);
+    shotPlan.duration = 1.15;
     return;
   }
   if (mode === 'defuse') {
@@ -168,23 +167,17 @@ function setupShot() {
     const atk = S.players.filter((p) => p.team === TEAM.ATK);
     for (const f of [...atk, ...def]) { giveWeapon(f, 'rifle'); f.armor = 100; f.weapons.current = 'primary'; }
     const defuser = def[0];
-    teleport(defuser, -20.2, 0.4, Math.PI / 2);
+    teleport(defuser, -20.2, 0.4, 0);
+    defuser.yaw = yawTo(defuser.pos, S.bomb.pos);
     defuser.crouch = true;
     defuser.hasKit = true;
     defuser.bot.state = 'defuse';
-    const cover = def[1];
-    teleport(cover, -24.5, -4.5, 2.4);
-    cover.bot.state = 'hold';
-    cover.bot.holdYaw = 2.4;
-    cover.bot.path = [];
-    teleport(S.human, -16.8, 2.8, 0);
+    // Everyone else stays at their spawns, far away: the tableau is just
+    // the defuser at work and the human watching him through the planters.
+    teleport(S.human, -16.2, 3.4, 0);
     S.human.yaw = yawTo(S.human.pos, defuser.pos);
-    const mate = atk[1];
-    teleport(mate, -18.5, -3.5, 0.4);
-    mate.bot.state = 'hold';
-    mate.bot.holdYaw = 0.4;
-    mate.bot.path = [];
-    shotPlan.duration = 0.9;
+    S.human.pitch = -0.05;
+    shotPlan.duration = 1.2;
     return;
   }
   shotPlan.hold = true;

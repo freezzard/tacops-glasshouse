@@ -132,7 +132,7 @@ export function syncViewmodel(f, dt) {
   if (!vm) return;
   const w = f.weapons;
   const id = currentWeaponId(f);
-  if (!f.alive || !id) { vm.visible = false; return; }
+  if (!f.alive || !id || S.phase === 'menu' || S.phase === 'matchover') { vm.visible = false; return; }
   vm.visible = true;
   const isGun = id !== 'knife' && id !== 'frag' && id !== 'smoke';
   vmParts.barrel.visible = isGun;

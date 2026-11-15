@@ -80,7 +80,7 @@ export function frameHud() {
   // Vitals.
   const hp = Math.max(0, Math.ceil(f.hp));
   setText(el.hpnum, f.alive ? String(hp) : '—');
-  setText(el.apnum, f.armor > 0 ? `🛡 ${Math.ceil(f.armor)}${f.helmet ? ' + helmet' : ''}` : '');
+  setText(el.apnum, f.armor > 0 ? `Armor ${Math.ceil(f.armor)}${f.helmet ? ' + helmet' : ''}` : '');
   el.hpbar.style.width = `${hp}%`;
   el.hpbar.style.background = hp > 50 ? '#7dd069' : hp > 25 ? '#e8c33d' : '#e85d3d';
   el.apbar.style.width = `${Math.max(0, f.armor)}%`;
@@ -144,7 +144,7 @@ export function frameHud() {
     const div = document.createElement('div');
     const a = line.a, v = line.v;
     div.innerHTML = `<span class="${a && a.team === TEAM.ATK ? 'a' : 'd'}">${a ? a.name : '—'}</span>` +
-      ` ${WEAPONS[line.weapon] ? WEAPONS[line.weapon].name : line.weapon}${line.head ? ' <span class="hs">⌖</span>' : ''} ` +
+      ` ${WEAPONS[line.weapon] ? WEAPONS[line.weapon].name : line.weapon}${line.head ? ' <span class="hs">HS</span>' : ''} ` +
       `<span class="${v.team === TEAM.ATK ? 'a' : 'd'}">${v.name}</span>`;
     el.feed.prepend(div);
     feedNodes.push({ node: div, until: S.time + 4.5 });
@@ -216,11 +216,12 @@ function frameBuy(f) {
     const price = isGun ? WEAPONS[id].price : id === 'helmet' ? GEAR.helmet.price - GEAR.armor.price : GEAR[id].price;
     const owned = (isGun && f.weapons.primary === id) ||
       (id === 'armor' && f.armor >= 100) || (id === 'helmet' && f.helmet) ||
-      (id === 'kit' && f.hasKit) || ((id === 'frag' || id === 'smoke') && f.weapons.grenades[id] > 0) ||
-      (id === 'kit' && f.team !== TEAM.DEF) || (id === 'helmet' && f.armor <= 0);
+      (id === 'kit' && f.hasKit) || ((id === 'frag' || id === 'smoke') && f.weapons.grenades[id] > 0);
+    const blocked = (id === 'kit' && f.team !== TEAM.DEF) ? 'Wardens only'
+      : (id === 'helmet' && f.armor <= 0) ? 'Needs vest' : null;
     const btn = document.createElement('button');
-    btn.innerHTML = `<span class="key">${i + 1}</span> ${name} <b>${owned ? 'owned' : '$' + price}</b>`;
-    btn.disabled = owned || f.money < price;
+    btn.innerHTML = `<span class="key">${i + 1}</span> ${name} <b>${owned ? 'owned' : blocked || '$' + price}</b>`;
+    btn.disabled = owned || !!blocked || f.money < price;
     btn.addEventListener('click', () => buyItem(f, id));
     el.buygrid.appendChild(btn);
   });
@@ -234,7 +235,7 @@ function frameBoard(f) {
   const rows = [...S.players].sort((a, b) => b.kills - a.kills || a.deaths - b.deaths);
   let html = '<table><tr><th>Fighter</th><th>Side</th><th class="n">K</th><th class="n">D</th><th class="n">A</th><th class="n">$</th></tr>';
   for (const p of rows) {
-    html += `<tr class="${p === f ? 'me' : ''}"><td>${p.name}${p.alive ? '' : ' ✝'}</td>` +
+    html += `<tr class="${p === f ? 'me' : ''}"><td>${p.name}${p.alive ? '' : ' — down'}</td>` +
       `<td>${TEAM_NAME[p.team]}</td><td class="n">${p.kills}</td><td class="n">${p.deaths}</td>` +
       `<td class="n">${p.assists}</td><td class="n">${p.money}</td></tr>`;
   }

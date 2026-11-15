@@ -204,7 +204,12 @@ function setupShot() {
       teleport(atk[1], 0, 7.2, 0);
       teleport(atk[2], 3.5, 4.6, 0);
       atk[2].yaw = yawTo(atk[2].pos, { x: -2, z: -4 });
-      S.shotPose = { x: 12.5, y: 6.4, z: 18.5, yaw: 0.57, pitch: -0.17 };
+      teleport(atk[3], 5.5, 11, 0);
+      atk[3].yaw = yawTo(atk[3].pos, { x: 0, z: 2 });
+      atk[3].bot.state = 'hold';
+      // Closer and lower than the first framing: the dome still owns the
+      // shot, but the cast reads at a size a cover needs.
+      S.shotPose = { x: 11, y: 4.6, z: 15.5, yaw: 0.6, pitch: -0.14 };
     }
     shotPlan.hold = true;
     window.__shotReady = true;
@@ -231,9 +236,9 @@ function setupShot() {
     }
     teleport(S.human, 0.8, 6.8, 0);
     teleport(atk[1], -3.5, 7.5, 0);
-    teleport(atk[2], 3.5, 7.5, 0);
-    teleport(def[0], 0, -5.5, Math.PI);
-    teleport(def[1], -5.5, -6.5, Math.PI);
+    teleport(atk[2], 4.6, 2.8, 0);
+    teleport(def[0], 1.6, -4.0, Math.PI);
+    teleport(def[1], -3.6, -3.4, Math.PI);
     shotPlan.duration = 1.15;
     return;
   }
@@ -256,9 +261,9 @@ function setupShot() {
     defuser.bot.state = 'defuse';
     // Everyone else stays at their spawns, far away: the tableau is just
     // the defuser at work and the human watching him through the planters.
-    teleport(S.human, -15.2, 4.2, 0);
+    teleport(S.human, -14.6, 1.0, 0);
     S.human.yaw = yawTo(S.human.pos, defuser.pos);
-    S.human.pitch = -0.05;
+    S.human.pitch = -0.02;
     shotPlan.duration = 1.2;
     return;
   }

@@ -10,10 +10,11 @@ import * as THREE from 'three';
 import { S, TEAM, makeRng } from './state.js';
 import { PAL } from './palette.js';
 import { buildMap, WORLD } from './map.js';
+import { buildFigure } from './models.js';
+import { poseFigure } from './anim.js';
 import { initInput, lockPointer, input } from './input.js';
 import { initAudio } from './audio.js';
 import { initCombat, updateCombat } from './combat.js';
-import { makeBody, syncBody } from './bots.js';
 import { initViewmodel, syncViewmodel, cameraPose } from './player.js';
 import { createRoster, resetMatch, step as stepMatch } from './rounds.js';
 import { giveWeapon } from './weapons.js';
@@ -28,15 +29,44 @@ S.shot = params.get('shot');
 
 const canvas = document.getElementById('view');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 1.02;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(PAL.sky);
+// Image-based light from a painted sky: a small equirect canvas — warm
+// horizon, green glasshouse glow, one soft sun disc — so the glass, the
+// brass and the water have something real to reflect. No texture files.
+{
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 256;
+  const ctx = c.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0, '#9fc4de');
+  grad.addColorStop(0.42, '#cfe5cf');
+  grad.addColorStop(0.55, '#ffe3b3');
+  grad.addColorStop(0.62, '#7d8f6d');
+  grad.addColorStop(1, '#3d4a38');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 512, 256);
+  const sun = ctx.createRadialGradient(360, 118, 2, 360, 118, 60);
+  sun.addColorStop(0, 'rgba(255,246,220,0.95)');
+  sun.addColorStop(0.25, 'rgba(255,227,179,0.55)');
+  sun.addColorStop(1, 'rgba(255,227,179,0)');
+  ctx.fillStyle = sun;
+  ctx.fillRect(0, 0, 512, 256);
+  ctx.fillStyle = 'rgba(255,255,255,0.20)';
+  for (let x = 24; x < 512; x += 64) ctx.fillRect(x, 30, 20, 92); // glasshouse panes
+  const env = new THREE.CanvasTexture(c);
+  env.mapping = THREE.EquirectangularReflectionMapping;
+  env.colorSpace = THREE.SRGBColorSpace;
+  scene.environment = env;
+  scene.environmentIntensity = 0.55;
+}
 const camera = new THREE.PerspectiveCamera(74, window.innerWidth / window.innerHeight, 0.08, 240);
 camera.rotation.order = 'YXZ';
 scene.add(camera);
@@ -49,7 +79,9 @@ initHud();
 function buildBodies() {
   for (const f of S.players) {
     if (f.body) scene.remove(f.body);
-    f.body = makeBody(f.team);
+    const built = buildFigure(f.team);
+    f.body = built.group;
+    f.rig = built.rig;
     scene.add(f.body);
   }
 }
@@ -128,8 +160,37 @@ function teleport(f, x, z, yaw) {
 
 function setupShot() {
   const mode = S.shot;
-  if (mode === 'vista') {
-    S.shotPose = { x: 12.5, y: 6.4, z: 18.5, yaw: 0.57, pitch: -0.17 };
+  if (mode === 'vista' || mode === 'pose') {
+    // The cover and the rig check share a staging: dressed fighters in and
+    // around the dome, rifles up, so the shot shows the cast, not an empty
+    // room. Nobody simulates in menu phase; poseFigure holds the poses.
+    const atk = S.players.filter((p) => p.team === TEAM.ATK);
+    const def = S.players.filter((p) => p.team === TEAM.DEF);
+    for (const f of [...atk, ...def]) {
+      giveWeapon(f, 'rifle');
+      f.armor = 100;
+      f.helmet = true;
+      f.weapons.current = 'primary';
+    }
+    if (mode === 'pose') {
+      teleport(def[0], -0.75, -0.2, 0);
+      def[0].yaw = yawTo(def[0].pos, { x: 2.6, z: 3.6 });
+      def[0].bot.state = 'hold';
+      def[0].pitch = 0.08;
+      teleport(atk[0], 0.85, 0.35, 0);
+      atk[0].yaw = yawTo(atk[0].pos, { x: 2.6, z: 3.6 });
+      S.shotPose = { x: 2.6, y: 1.55, z: 3.6, yaw: 0.63, pitch: -0.04 };
+    } else {
+      teleport(def[0], -3, -6.9, Math.PI);
+      def[0].pos.y = 3.0; // on the north catwalk
+      teleport(def[1], -4.5, -1.5, 0);
+      def[1].yaw = yawTo(def[1].pos, { x: 12.5, z: 18.5 });
+      def[1].bot.state = 'hold';
+      teleport(atk[1], 0, 7.2, 0);
+      teleport(atk[2], 3.5, 4.6, 0);
+      atk[2].yaw = yawTo(atk[2].pos, { x: -2, z: -4 });
+      S.shotPose = { x: 12.5, y: 6.4, z: 18.5, yaw: 0.57, pitch: -0.17 };
+    }
     shotPlan.hold = true;
     window.__shotReady = true;
     return;
@@ -260,7 +321,7 @@ function render(now) {
     camera.updateProjectionMatrix();
   }
   for (const f of S.players) {
-    syncBody(f, dt);
+    poseFigure(f, dt);
     if (f.body) f.body.visible = f.isHuman ? !f.alive : true;
   }
   // The charge rides on its carrier's back, then sits where it was left.

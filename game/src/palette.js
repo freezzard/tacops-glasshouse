@@ -34,6 +34,23 @@ export const PAL = {
   def: 0x3fbfae, // Wardens, teal
   defDark: 0x247a6e,
 
+  // The two uniforms (models.js). Wardens: botanical greens under glass-
+  // teal plate, an orange visor. Raiders: charcoal cloth under rust plate,
+  // an amber visor. Silhouette first, colour second.
+  suitDef: 0x2e5d43,
+  armorDef: 0x2f8f83,
+  armorDefDark: 0x1e4a41,
+  suitAtk: 0x3a3d40,
+  armorAtk: 0x9a4a2e,
+  armorAtkDark: 0x63321f,
+  clothAtk: 0x54432f,
+  visorDef: 0xff7a26,
+  visorAtk: 0xffb340,
+  skin: 0xc9a183,
+  skinDark: 0x9a7350,
+  glove: 0x24262a,
+  boot: 0x2a2724,
+
   tracerAtk: 0xffc46b,
   tracerDef: 0x8ff2e2,
   muzzle: 0xffd9a0,

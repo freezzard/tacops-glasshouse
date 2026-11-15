@@ -1,16 +1,14 @@
-// bots.js — the nine other fighters: their bodies and their brains.
+// bots.js — the nine other fighters' brains.
 //
-// Bodies are box-built figures in team colours with a separate head, so the
-// silhouette the raycast tests is the one you see. Brains run on a budget:
-// perception refreshes a few times a second per bot, sight is a cone plus a
-// sight-line test, hearing is the noise list combat publishes, and movement
-// follows the map's waypoint graph. A bot that sees you still needs a human
-// beat to react, aims worse the longer your duel is fresh, and fires in
-// bursts — it is beatable, but it punishes noise and dry peeks.
+// Their bodies are built by models.js and posed by anim.js; this file is
+// the thinking. Brains run on a budget: perception refreshes a few times a
+// second per bot, sight is a cone plus a sight-line test, hearing is the
+// noise list combat publishes, and movement follows the map's waypoint
+// graph. A bot that sees you still needs a human beat to react, aims worse
+// the longer your duel is fresh, and fires in bursts — it is beatable, but
+// it punishes noise and dry peeks.
 
-import * as THREE from 'three';
 import { S, TEAM, rand } from './state.js';
-import { PAL } from './palette.js';
 import { WORLD } from './map.js';
 import { sightBlocked, eyePos, angleLerp, yawTo, dist2d } from './physics.js';
 import { WEAPONS, GEAR, giveWeapon, switchTo } from './weapons.js';
@@ -20,76 +18,6 @@ export const BOT_NAMES = {
   atk: ['Vex', 'Moss', 'Juno', 'Pike'],
   def: ['Sable', 'Rook', 'Ivy', 'Tarn', 'Hollis'],
 };
-
-// ---------- bodies ----------
-
-const bodyParts = new WeakMap();
-
-export function makeBody(team) {
-  const main = team === TEAM.ATK ? PAL.atk : PAL.def;
-  const dark = team === TEAM.ATK ? PAL.atkDark : PAL.defDark;
-  const mat = new THREE.MeshStandardMaterial({ color: main, roughness: 0.85 });
-  const matDark = new THREE.MeshStandardMaterial({ color: dark, roughness: 0.9 });
-  const matSkin = new THREE.MeshStandardMaterial({ color: 0xc9a183, roughness: 0.8 });
-  const matGun = new THREE.MeshStandardMaterial({ color: 0x2e3236, roughness: 0.45, metalness: 0.5 });
-
-  const g = new THREE.Group();
-  const legL = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.78, 0.2), matDark);
-  const legR = legL.clone();
-  legL.position.set(-0.13, 0.39, 0);
-  legR.position.set(0.13, 0.39, 0);
-  const hips = new THREE.Group();
-  hips.position.y = 0.78;
-  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.6, 0.3), mat);
-  torso.position.y = 0.3;
-  const plate = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.44, 0.06), matDark);
-  plate.position.set(0, 0.3, -0.17);
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.3, 0.27), matSkin);
-  head.position.y = 0.78;
-  const cap = new THREE.Mesh(new THREE.BoxGeometry(0.31, 0.09, 0.31), matDark);
-  cap.position.y = 0.95;
-  const gun = new THREE.Group();
-  const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.16, 0.62), matGun);
-  gunBody.position.z = -0.3;
-  const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.045, 0.3), matGun);
-  barrel.position.set(0, 0.03, -0.72);
-  gun.add(gunBody, barrel);
-  gun.position.set(0.16, 0.34, -0.1);
-  const armL = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.11, 0.42), mat);
-  armL.position.set(-0.2, 0.36, -0.18);
-  armL.rotation.x = 0.25;
-  const armR = armL.clone();
-  armR.position.x = 0.24;
-  hips.add(torso, plate, head, cap, gun, armL, armR);
-  g.add(legL, legR, hips);
-  g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
-  bodyParts.set(g, { legL, legR, hips, gun, cap, phase: 0, deathT: 0 });
-  return g;
-}
-
-export function syncBody(f, dt) {
-  const g = f.body;
-  if (!g) return;
-  const parts = bodyParts.get(g);
-  g.position.set(f.pos.x, f.pos.y, f.pos.z);
-  g.rotation.y = f.yaw;
-  if (!f.alive) {
-    parts.deathT = Math.min(1, parts.deathT + dt * 2.4);
-    g.rotation.x = -Math.PI / 2 * parts.deathT;
-    g.position.y = f.pos.y + 0.12 * parts.deathT;
-    return;
-  }
-  parts.deathT = 0;
-  g.rotation.x = 0;
-  const hipTarget = f.crouch ? 0.46 : 0.78;
-  parts.hips.position.y += (hipTarget - parts.hips.position.y) * Math.min(1, dt * 10);
-  parts.phase += f.speedNow * dt * 2.1;
-  const swing = Math.sin(parts.phase) * 0.5 * Math.min(1, f.speedNow / 3);
-  parts.legL.rotation.x = swing;
-  parts.legR.rotation.x = -swing;
-  parts.gun.rotation.x = f.pitch;
-  parts.cap.visible = !!f.helmet;
-}
 
 // ---------- brains ----------
 

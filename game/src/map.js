@@ -31,6 +31,22 @@ export const WORLD = {
 
 let mats = null;
 
+// Atmosphere: the garden's warm haze, and the ice it turns toward. While
+// the Cryo-Core is anchored, or as Dome Seal Pressure falls, the fog and
+// the hemisphere light chill toward ice blue; updateAtmosphere (called by
+// the render loop) eases the mix both ways, so it reads as weather.
+const ATMO = { fog: null, hemi: null, mix: 0, warmFog: null, warmSky: null, warmGround: null };
+const ICE = { fog: new THREE.Color(0x9fc8dc), sky: new THREE.Color(0xb9d9ec), ground: new THREE.Color(0x39505e) };
+
+export function updateAtmosphere(dt) {
+  if (!ATMO.fog) return;
+  const want = Math.max(S.bomb.state === 'planted' ? 1 : 0, (100 - S.sealPct) / 40);
+  ATMO.mix += Math.sign(want - ATMO.mix) * Math.min(dt * 0.5, Math.abs(want - ATMO.mix));
+  ATMO.fog.color.lerpColors(ATMO.warmFog, ICE.fog, ATMO.mix);
+  ATMO.hemi.color.lerpColors(ATMO.warmSky, ICE.sky, ATMO.mix);
+  ATMO.hemi.groundColor.lerpColors(ATMO.warmGround, ICE.ground, ATMO.mix);
+}
+
 function buildMats() {
   const std = (opts) => new THREE.MeshStandardMaterial(opts);
   return {
@@ -140,9 +156,9 @@ function tree(scene, cx, cz, s) {
   scene.add(trunk);
   const blobs = [[0, 3.6, 0, 1.5], [0.9, 3.1, 0.3, 1.0], [-0.8, 3.2, -0.4, 1.05], [0.2, 3.0, 0.8, 0.85]];
   for (const [ox, oy, oz, r] of blobs) {
-    const b = new THREE.Mesh(new THREE.SphereGeometry(r * s, 8, 6), rngMat());
+    const b = new THREE.Mesh(new THREE.IcosahedronGeometry(r * s, 0), rngMat());
     b.position.set(cx + ox * s, oy * s + 1.0, cz + oz * s);
-    b.castShadow = true;
+    b.castShadow = false;
     scene.add(b);
   }
 }
@@ -200,12 +216,16 @@ export function buildMap(scene) {
   for (const s of [-1, 1]) buildWing(scene, s, leafTex);
   dressing(scene, leafTex);
   buildFoliage(scene);
+  buildBackdrop(scene);
   buildNodes();
   buildSpawns();
 
   // Light: a low warm sun through the glass, and soft green bounce.
   const hemi = new THREE.HemisphereLight(PAL.hemiSky, PAL.hemiGround, 1.02);
   scene.add(hemi);
+  ATMO.hemi = hemi;
+  ATMO.warmSky = hemi.color.clone();
+  ATMO.warmGround = hemi.groundColor.clone();
   const sun = new THREE.DirectionalLight(PAL.sun, 2.3);
   sun.position.set(26, 34, 20);
   sun.castShadow = true;
@@ -216,7 +236,9 @@ export function buildMap(scene) {
   sun.shadow.bias = -0.0004;
   sun.shadow.normalBias = 0.03;
   scene.add(sun);
-  scene.fog = new THREE.Fog(PAL.fog, 46, 120);
+  scene.fog = new THREE.FogExp2(PAL.fog, 0.010);
+  ATMO.fog = scene.fog;
+  ATMO.warmFog = scene.fog.color.clone();
   return WORLD;
 }
 
@@ -233,7 +255,7 @@ function buildFoliage(scene) {
     [-28.5, 19], [28.5, 19], [-28.5, -19], [28.5, -19], [-19, 0.5], [19, -6.8]]) {
     spots.push({ x, y: 0.42, z, s: 1.25 });
   }
-  const blobGeo = new THREE.SphereGeometry(0.5, 7, 5);
+  const blobGeo = new THREE.IcosahedronGeometry(0.5, 0);
   const halves = [[], []];
   spots.forEach((sp, i) => halves[i % 2].push(sp));
   [mats.leafDark, mats.leafLight].forEach((mat, h) => {
@@ -245,7 +267,7 @@ function buildFoliage(scene) {
       dummy.updateMatrix();
       im.setMatrixAt(i, dummy.matrix);
     });
-    im.castShadow = true;
+    im.castShadow = false;
     scene.add(im);
   });
   // Crossed leaf cards above the planter shrubs, reusing the planter
@@ -287,6 +309,40 @@ function buildFoliage(scene) {
   scene.add(vines, tips);
 }
 
+// The world past the fence: a far ground sheet, sister glasshouses and
+// low hills, all silhouette-cheap — shared materials, no shadows, no
+// colliders. They exist so the horizon through the dome glass and over
+// the yard walls is a place, not an edge.
+function buildBackdrop(scene) {
+  const far = new THREE.Mesh(new THREE.PlaneGeometry(180, 130), mats.leafDark);
+  far.rotation.x = -Math.PI / 2;
+  far.position.y = -0.03;
+  scene.add(far);
+  const house = (x, z, s, a) => {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(7, 3.2, 4.6), mats.wall);
+    body.position.y = 1.6;
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(4.1, 2.2, 4), mats.terraDark);
+    roof.position.y = 4.3;
+    roof.rotation.y = Math.PI / 4;
+    roof.scale.z = 0.55;
+    g.add(body, roof);
+    g.position.set(x, 0, z);
+    g.rotation.y = a;
+    g.scale.setScalar(s);
+    scene.add(g);
+  };
+  const hill = (x, z, r, h) => {
+    const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 7), mats.leafDark);
+    m.position.set(x, h / 2 - 0.1, z);
+    scene.add(m);
+  };
+  house(-42, -15, 1, 0.4); house(45, -17, 1.25, -0.3); house(-45, 15, 0.85, 0.9);
+  house(47, 13, 1.1, 0.2); house(-6, -35, 1.35, 0);
+  hill(-36, 31, 13, 4.5); hill(28, 33, 16, 5.5); hill(55, -4, 12, 4);
+  hill(-56, -8, 15, 5); hill(14, 37, 10, 3.5);
+}
+
 function wallShell(scene) {
   const H = 4.4;
   solid(scene, 0, -22.2, 65, 0.6, H, mats.wall); // north, behind the corridor
@@ -319,17 +375,21 @@ function buildDome(scene, leafTex) {
     glassPane(scene, -3.9, z, 2.4, true);
     glassPane(scene, 3.9, z, 2.4, true);
   }
-  // The glass dome itself and its brass rim.
+  // The glass dome itself and its brass rim. Shell, rim, ribs and rings
+  // are built round, then the whole group is scaled into an ellipse
+  // (x 0.952, z 0.635) so the shell seats on the 24x16 hall instead of
+  // overhanging the north and south walls. Visual only — no colliders.
+  const shell = new THREE.Group();
   const dome = new THREE.Mesh(new THREE.SphereGeometry(13.5, 24, 12, 0, Math.PI * 2, 0, Math.PI * 0.42), mats.glassRoof);
   dome.position.y = 1.2;
-  scene.add(dome);
+  shell.add(dome);
   const rim = new THREE.Mesh(new THREE.TorusGeometry(12.6, 0.16, 8, 40), mats.frame);
   rim.rotation.x = Math.PI / 2;
   rim.position.y = 4.6;
-  scene.add(rim);
+  shell.add(rim);
   // The dome's skeleton: four meridian ribs and two latitude rings of
   // brass, riding just under the glass so the shell reads as engineering,
-  // not a bubble. Visual only — the colliders stay as they were.
+  // not a bubble.
   const ribGeo = new THREE.TorusGeometry(13.42, 0.07, 6, 42, Math.PI * 0.84);
   for (let k = 0; k < 4; k++) {
     const rib = new THREE.Mesh(ribGeo, mats.frame);
@@ -337,15 +397,17 @@ function buildDome(scene, leafTex) {
     rib.rotation.y = (k * Math.PI) / 4 + Math.PI / 8;
     rib.rotation.z = Math.PI / 2 - Math.PI * 0.42;
     rib.position.y = 1.2;
-    scene.add(rib);
+    shell.add(rib);
   }
   for (const th of [0.2, 0.33]) {
     const ring = new THREE.Mesh(
       new THREE.TorusGeometry(13.42 * Math.sin(th * Math.PI), 0.055, 6, 48), mats.frame);
     ring.rotation.x = Math.PI / 2;
     ring.position.y = 1.2 + 13.42 * Math.cos(th * Math.PI);
-    scene.add(ring);
+    shell.add(ring);
   }
+  shell.scale.set(0.952, 1, 0.635);
+  scene.add(shell);
 
   // Centre planter with the big tree, and four planters around it.
   const bed = new THREE.Mesh(new THREE.CylinderGeometry(1.9, 2.1, 1.05, 18), mats.terraDark);

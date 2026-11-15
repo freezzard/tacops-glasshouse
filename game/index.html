@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glasshouse Breach — a three.js tactical FPS</title>
+<style>
+  html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#0d1512;
+    font-family:"Segoe UI", system-ui, sans-serif; color:#e8f0e9; }
+  #view { position:fixed; inset:0; display:block; }
+  .layer { position:fixed; inset:0; pointer-events:none; }
+  /* top centre: timer and round score */
+  #topbar { position:absolute; top:10px; left:50%; transform:translateX(-50%);
+    display:flex; align-items:stretch; gap:6px; text-align:center; }
+  .side { min-width:86px; padding:4px 10px; border-radius:6px; background:rgba(10,18,14,.62); }
+  .side b { display:block; font-size:20px; line-height:1; }
+  .side span { font-size:10px; letter-spacing:.14em; text-transform:uppercase; opacity:.85; }
+  #atkbox { border-bottom:3px solid #e8a33d; } #defbox { border-bottom:3px solid #3fbfae; }
+  #clock { min-width:74px; padding:4px 8px; border-radius:6px; background:rgba(10,18,14,.62); }
+  #clock b { display:block; font-size:22px; line-height:1; font-variant-numeric:tabular-nums; }
+  #clock span { font-size:10px; letter-spacing:.14em; text-transform:uppercase; opacity:.85; }
+  #clock.hot b { color:#ff7a5c; }
+  /* bottom corners */
+  #vitals { position:absolute; left:18px; bottom:16px; width:230px; }
+  .bar { height:12px; border-radius:3px; background:rgba(255,255,255,.14); margin-top:4px; overflow:hidden; }
+  .bar i { display:block; height:100%; background:#7dd069; }
+  #armorbar i { background:#6db3e8; }
+  #hpnum { font-size:26px; font-weight:700; } #apnum { font-size:15px; opacity:.9; margin-left:8px; }
+  #money { margin-top:6px; font-size:17px; color:#ffd97a; font-weight:600; }
+  #kit { font-size:12px; opacity:.85; }
+  #arms { position:absolute; right:18px; bottom:16px; text-align:right; }
+  #wname { font-size:13px; letter-spacing:.12em; text-transform:uppercase; opacity:.9; }
+  #ammo { font-size:34px; font-weight:700; font-variant-numeric:tabular-nums; }
+  #ammo small { font-size:17px; opacity:.75; font-weight:400; }
+  #ammo.low { color:#ff7a5c; }
+  #slots { font-size:12px; opacity:.85; margin-top:2px; }
+  /* centre */
+  #cross { position:absolute; left:50%; top:50%; width:0; height:0; }
+  #cross i { position:absolute; background:#eaffea; box-shadow:0 0 2px #000; }
+  #hitmark { position:absolute; left:50%; top:50%; width:0; height:0; opacity:0; }
+  #hitmark i { position:absolute; width:11px; height:2px; background:#fff; box-shadow:0 0 3px #000; }
+  #hitmark.kill i { background:#ff5c47; }
+  #dmgdir { position:absolute; left:50%; top:50%; width:0; height:0; }
+  #dmgdir i { position:absolute; width:64px; height:64px; margin:-32px 0 0 -32px; border-radius:50%;
+    border:3px solid transparent; border-top-color:rgba(255,70,50,.85); opacity:0; }
+  #vig { position:absolute; inset:0; box-shadow:inset 0 0 140px rgba(200,20,10,0); transition:box-shadow .12s; }
+  #prompt { position:absolute; left:50%; bottom:24%; transform:translateX(-50%);
+    font-size:16px; background:rgba(10,18,14,.6); padding:5px 14px; border-radius:5px; display:none; }
+  #plantwrap { position:absolute; left:50%; top:56%; transform:translateX(-50%); width:260px; display:none; }
+  #plantwrap .bar i { background:#e8a33d; }
+  #plantlabel { text-align:center; font-size:12px; letter-spacing:.12em; text-transform:uppercase; }
+  /* right column */
+  #feed { position:absolute; right:16px; top:64px; width:300px; text-align:right; font-size:13px; }
+  #feed div { background:rgba(10,18,14,.55); margin-bottom:3px; padding:3px 8px; border-radius:4px; }
+  #feed .a { color:#e8a33d; } #feed .d { color:#3fbfae; } #feed .hs { color:#ff8a70; }
+  /* banners and panels */
+  #banner { position:absolute; left:50%; top:26%; transform:translateX(-50%); text-align:center; display:none; }
+  #banner h1 { margin:0; font-size:42px; letter-spacing:.06em; text-shadow:0 2px 14px #000; }
+  #banner p { margin:4px 0 0; font-size:16px; opacity:.92; }
+  .panel { pointer-events:auto; background:rgba(9,16,12,.88); border:1px solid rgba(255,255,255,.16);
+    border-radius:10px; padding:18px 22px; }
+  #buy { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:520px; display:none; }
+  #buy h2 { margin:0 0 4px; font-size:19px; } #buy .sub { font-size:12px; opacity:.8; margin-bottom:10px; }
+  #buygrid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  #buygrid button { pointer-events:auto; text-align:left; background:rgba(255,255,255,.07); color:#e8f0e9;
+    border:1px solid rgba(255,255,255,.14); border-radius:6px; padding:7px 10px; font-size:13px; cursor:pointer; }
+  #buygrid button:hover:not(:disabled) { background:rgba(255,255,255,.16); }
+  #buygrid button:disabled { opacity:.38; cursor:default; }
+  #buygrid button b { float:right; color:#ffd97a; font-weight:600; }
+  #buygrid button .key { display:inline-block; min-width:16px; color:#9fd08a; font-weight:700; }
+  #board { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:560px; display:none; }
+  #board h2 { margin:0 0 8px; font-size:18px; text-align:center; }
+  #board table { width:100%; border-collapse:collapse; font-size:13px; }
+  #board td, #board th { padding:3px 6px; text-align:left; }
+  #board td.n, #board th.n { text-align:right; font-variant-numeric:tabular-nums; }
+  #board tr.me { background:rgba(255,255,255,.09); }
+  #menu { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(ellipse at 50% 38%, rgba(20,40,30,.25), rgba(5,10,8,.78)); pointer-events:auto; }
+  #menu .panel { width:560px; text-align:center; }
+  #menu h1 { margin:0; font-size:44px; letter-spacing:.05em; color:#cfe8b8; }
+  #menu h1 em { color:#e8a33d; font-style:normal; }
+  #menu p { font-size:14px; line-height:1.55; opacity:.92; }
+  #menu .keys { font-size:12.5px; text-align:left; margin:10px auto 4px; width:400px; line-height:1.7; }
+  #menu .keys b { color:#9fd08a; display:inline-block; min-width:86px; }
+  #play { pointer-events:auto; margin-top:12px; font-size:17px; padding:10px 34px; border-radius:7px;
+    border:1px solid #9fd08a; background:#2c5b34; color:#eaffea; cursor:pointer; }
+  #play:hover { background:#387347; }
+  #end { position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+    background:rgba(5,10,8,.72); pointer-events:auto; }
+  #end .panel { width:480px; text-align:center; }
+  #end h1 { margin:0 0 6px; font-size:36px; }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+
+<div class="layer" id="hud" hidden>
+  <div id="topbar">
+    <div class="side" id="atkbox"><b id="atkScore">0</b><span>Raiders</span></div>
+    <div id="clock"><b id="clockTime">1:40</b><span id="clockLabel">Round</span></div>
+    <div class="side" id="defbox"><b id="defScore">0</b><span>Wardens</span></div>
+  </div>
+  <div id="vitals">
+    <div><span id="hpnum">100</span><span id="apnum"></span></div>
+    <div class="bar"><i id="hpbar" style="width:100%"></i></div>
+    <div class="bar" id="armorbar"><i id="apbar" style="width:0%"></i></div>
+    <div id="money">$800</div>
+    <div id="kit"></div>
+  </div>
+  <div id="arms">
+    <div id="wname">Sparrow P9</div>
+    <div id="ammo">12 <small>/ 48</small></div>
+    <div id="slots">1 Rifle · 2 Sidearm · 3 Knife · 4 Grenade</div>
+  </div>
+  <div id="cross"></div>
+  <div id="hitmark"></div>
+  <div id="dmgdir"><i></i></div>
+  <div id="vig"></div>
+  <div id="prompt"></div>
+  <div id="plantwrap"><div id="plantlabel">Planting</div><div class="bar"><i id="plantbar" style="width:0%"></i></div></div>
+  <div id="feed"></div>
+  <div id="banner"><h1 id="bannerTitle"></h1><p id="bannerSub"></p></div>
+  <div id="buy" class="panel"><h2>Buy Equipment</h2><div class="sub" id="buysub"></div><div id="buygrid"></div></div>
+  <div id="board" class="panel"><h2 id="boardTitle">Scoreboard</h2><div id="boardBody"></div></div>
+</div>
+
+<div id="menu">
+  <div class="panel">
+    <h1>GLASSHOUSE <em>BREACH</em></h1>
+    <p>Raiders storm a botanical research glasshouse to plant a charge in the
+       Orchid House or the Fern Vault. Wardens hold the glass. Five against five,
+       sixteen rounds, first to nine — money talks between rounds.</p>
+    <div class="keys">
+      <div><b>W A S D</b> move &nbsp; <b>Mouse</b> look &nbsp; <b>Click</b> fire</div>
+      <div><b>Shift</b> walk quietly &nbsp; <b>Ctrl / C</b> crouch &nbsp; <b>Space</b> jump</div>
+      <div><b>R</b> reload &nbsp; <b>1–4</b> weapons &nbsp; <b>Q</b> last weapon</div>
+      <div><b>B</b> buy menu (freeze time) &nbsp; <b>E</b> plant / defuse &nbsp; <b>Tab</b> scores</div>
+    </div>
+    <button id="play">Click to play</button>
+    <p style="font-size:12px;opacity:.7">Headphones help: the bots hear gunfire too.</p>
+  </div>
+</div>
+
+<div id="end"><div class="panel"><h1 id="endTitle"></h1><p id="endSub"></p>
+  <button id="again" style="pointer-events:auto;font-size:15px;padding:8px 26px;border-radius:7px;border:1px solid #9fd08a;background:#2c5b34;color:#eaffea;cursor:pointer">Play again</button>
+</div></div>
+
+<script type="importmap">
+{ "imports": { "three": "./three.module.min.js" } }
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

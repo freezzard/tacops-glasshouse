@@ -57,7 +57,14 @@ export function initInput(el, lockLost) {
 }
 
 export function lockPointer() {
-  if (canvas && !input.locked) canvas.requestPointerLock();
+  if (!canvas || input.locked) return;
+  // A lock request can be refused (headless capture, a document mid-
+  // navigation, the user alt-tabbing at the wrong instant). Refusal is
+  // not an error worth surfacing: the next click simply asks again.
+  try {
+    const p = canvas.requestPointerLock();
+    if (p && p.catch) p.catch(() => {});
+  } catch { /* refused — the next click retries */ }
 }
 
 // True once per physical press; the step that asks first consumes it.
